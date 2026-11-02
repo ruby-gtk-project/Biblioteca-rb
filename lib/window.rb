@@ -604,12 +604,22 @@ class Window
     # The title reaches three places: the tab, the content page's header, and
     # the window. An empty title leaves all three as they were, which is what
     # upstream's bind_property_full returns false for.
+    #
+    # The tab's own title is that page's title and is set whichever view
+    # emitted. The header and the window are the *selected* view's title, so
+    # they are guarded like every other handler here — without the guard a
+    # background tab finishing its load retitles the foreground tab's header
+    # and the window, which is the upstream bug in FINDINGS.md #5. The guard
+    # also has to hold for the call #update_webview makes on a tab switch,
+    # where `view` is the newly selected view by the time it runs.
     def on_title_changed(view, page)
       view.title.to_s.then do |title|
         unless title.empty?
           page.title = title
-          content_page.title = title
-          window.title = "#{title} - #{TITLE}"
+          if view.equal?(webview)
+            content_page.title = title
+            window.title = "#{title} - #{TITLE}"
+          end
         end
       end
     end

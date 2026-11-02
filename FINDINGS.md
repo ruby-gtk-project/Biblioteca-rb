@@ -175,6 +175,19 @@ header fills for the second tab's load.
 chrome. This is a deliberate divergence from upstream and the only one in the
 port that changes behaviour the user can see.
 
+The tab's *own* title is still written whichever view emitted, because that is
+that page's title and not the window's: only the two window-level writes in
+`#on_title_changed` (the content page's title and the window's) are guarded.
+
+**This claim was false until `test/drive_biblioteca.rb` was written.**
+`#on_title_changed` was the one handler of the four with no guard, so a
+background tab finishing its load retitled the foreground tab's header and the
+window — exactly the upstream bug this entry says the port does not have. The
+drive script caught it as an intermittent failure of "the content page title
+followed the switch" and now pins it with a deliberate check ("a background
+tab's title does not reach the foreground chrome"), which drives a background
+load and asserts the foreground chrome does not move.
+
 **Reported upstream:** not yet. Owed to
 <https://github.com/workbenchdev/Biblioteca/issues>.
 

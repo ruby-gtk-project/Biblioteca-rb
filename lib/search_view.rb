@@ -125,6 +125,13 @@ class SearchView
 
   def n_items = @results.length
 
+  # The ranked pages behind the list, highest score first. This — not
+  # selection_model.selected_item — is what every read inside this class goes
+  # through, and it is public for the same reason: a DocumentationPage read
+  # back out of a Gio::ListStore comes back as a fresh wrapper around the same
+  # GObject, with none of the plain Ruby attributes the store never carried.
+  def results = @results.dup
+
   def unselect_selection
     selection_model.selected.then do |index|
       unless index == INVALID_POSITION

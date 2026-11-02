@@ -216,7 +216,13 @@
             unset BUNDLE_GEMFILE BUNDLE_FROZEN
             echo "Biblioteca devshell — ruby $(ruby -e 'print RUBY_VERSION')"
             echo "run the app:   xvfb-run ruby exe/biblioteca"
-            echo "drive the app: xvfb-run ruby test/drive_*.rb"
+            # A screen argument, not just a display: xvfb-run's default screen
+            # is 640x480, GTK clamps a window to the monitor, and at 640px wide
+            # the window's "max-width: 850sp" breakpoint is applied the whole
+            # time, so the wide layout can never be driven. The drive script
+            # asserts the screen is big enough rather than quietly testing half
+            # the layout.
+            echo "drive the app: xvfb-run -a -s '-screen 0 1600x1200x24' ruby test/drive_biblioteca.rb"
             echo "run the specs: ruby -e 'require \"rspec/core\"; exit RSpec::Core::Runner.run([\"--format\", \"progress\", \"--require\", \"spec_helper\", \"spec\"])'"
           '';
         };
