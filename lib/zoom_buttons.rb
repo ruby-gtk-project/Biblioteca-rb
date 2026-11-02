@@ -2,6 +2,8 @@
 
 require 'adwaita'
 
+require_relative 'package'
+
 # ZoomButtons is the zoom row in the main menu's popover: minus, the current
 # level as a percentage, plus.
 #
@@ -12,10 +14,13 @@ require 'adwaita'
 # the same clamping apply either way.
 #
 # Upstream binds the webview's zoom-level property through to the label with
-# bind_property_full. Here the window hands the level over with
-# `zoom_level=` whenever it changes or the selected tab changes, which is the
-# same two moments the binding fired on.
+# bind_property_full and SYNC_CREATE (src/sidebar/ZoomButtons.js:10). Here the
+# window connects notify::zoom-level on each web view and calls `zoom_level=`
+# from it (lib/window.rb#on_zoom_changed), so a zoom WebKit makes by itself —
+# ctrl+scroll, or a pinch — reaches the label too.
 class ZoomButtons
+  include Package::Translatable
+
   def build
     box.tap do |b|
       b.append(zoom_out_button)
@@ -46,7 +51,7 @@ class ZoomButtons
   def zoom_out_button
     @zoom_out_button ||= Gtk::Button.new.tap do |button|
       button.icon_name = 'zoom-out-symbolic'
-      button.tooltip_text = 'Zoom out'
+      button.tooltip_text = _('Zoom out')
       button.action_name = 'win.zoom-out'
       button.halign = :center
       button.add_css_class('flat')
@@ -57,7 +62,7 @@ class ZoomButtons
   def zoom_in_button
     @zoom_in_button ||= Gtk::Button.new.tap do |button|
       button.icon_name = 'zoom-in-symbolic'
-      button.tooltip_text = 'Zoom in'
+      button.tooltip_text = _('Zoom in')
       button.action_name = 'win.zoom-in'
       button.halign = :center
       button.add_css_class('flat')

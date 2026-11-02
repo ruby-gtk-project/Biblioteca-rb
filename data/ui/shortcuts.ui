@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ported from upstream's src/Shortcuts.blp (origin/main @ 9e4eded).
+
+  This is a GtkShortcutsWindow and not an Adwaita::ShortcutsDialog because
+  only GtkShortcutsWindow carries the two things upstream's dialog has and
+  Adw's replacement does not: a section -> group -> shortcut hierarchy, and
+  shortcut-type: gesture_two_finger_swipe_*, which draws GTK's swipe
+  illustration for the two gesture rows. The widget is deprecated in GTK 4.18
+  and still present and functional in 4.22; see FINDINGS.md.
+
+  It is a .ui file rather than Ruby because GtkShortcutsShortcut's
+  shortcut-type has no Ruby constructor, and because every msgid here is then
+  exactly the byte sequence upstream's blueprint carries.
+-->
+<interface>
+  <object class="GtkShortcutsWindow" id="window_shortcuts">
+    <property name="hide-on-close">1</property>
+    <property name="modal">1</property>
+    <child>
+      <object class="GtkShortcutsSection">
+        <property name="section-name">shortcuts</property>
+        <property name="max-height">12</property>
+          <child>
+            <object class="GtkShortcutsGroup">
+              <property name="title" translatable="yes">Tabs</property>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Open tab</property>
+                  <property name="accelerator">&lt;Control&gt;T</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Close tab</property>
+                  <property name="accelerator">&lt;Control&gt;W</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Switch to the next tab</property>
+                  <property name="accelerator">&lt;Control&gt;Page_Down &lt;Control&gt;Tab</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Switch to the previous tab</property>
+                  <property name="accelerator">&lt;Control&gt;Page_Up &lt;Control&gt;&lt;Shift&gt;Tab</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Switch to the first tab</property>
+                  <property name="accelerator">&lt;Ctrl&gt;Home</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Switch to the last tab</property>
+                  <property name="accelerator">&lt;Control&gt;End</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">View all open tabs</property>
+                  <property name="accelerator">&lt;Shift&gt;&lt;Control&gt;o</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Move current tab backward</property>
+                  <property name="accelerator">&lt;Control&gt;&lt;Shift&gt;Page_Up</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Move current tab forward</property>
+                  <property name="accelerator">&lt;Control&gt;&lt;Shift&gt;Page_Down</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Move current tab at the start</property>
+                  <property name="accelerator">&lt;Control&gt;&lt;Shift&gt;Home</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Move current tab at the end</property>
+                  <property name="accelerator">&lt;Control&gt;&lt;Shift&gt;End</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Switch to tabs 1⋯10</property>
+                  <property name="accelerator">&lt;Alt&gt;1...0</property>
+                </object>
+              </child>
+            </object>
+          </child>
+          <child>
+            <object class="GtkShortcutsGroup">
+              <property name="title" translatable="yes">Navigation</property>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Go back to the previous page</property>
+                  <property name="accelerator">&lt;Alt&gt;Left</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Go forward to the next page</property>
+                  <property name="accelerator">&lt;Alt&gt;Right</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Focus global search</property>
+                  <property name="accelerator">&lt;Control&gt;K</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Find in page</property>
+                  <property name="accelerator">&lt;Control&gt;F</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Find next match</property>
+                  <property name="accelerator">&lt;Control&gt;G</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Find previous match</property>
+                  <property name="accelerator">&lt;Shift&gt;&lt;Control&gt;G</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Focus URL bar</property>
+                  <property name="accelerator">&lt;Control&gt;L</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="shortcut-type">gesture_two_finger_swipe_right</property>
+                  <property name="title" translatable="yes">Go back to the previous page</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="shortcut-type">gesture_two_finger_swipe_left</property>
+                  <property name="title" translatable="yes">Go forward to the next page</property>
+                </object>
+              </child>
+            </object>
+          </child>
+          <child>
+            <object class="GtkShortcutsGroup">
+              <property name="title" translatable="yes">Zoom</property>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Zoom in</property>
+                  <property name="accelerator">&lt;Control&gt;plus</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Zoom out</property>
+                  <property name="accelerator">&lt;Control&gt;minus</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Reset zoom</property>
+                  <property name="accelerator">&lt;Control&gt;0</property>
+                </object>
+              </child>
+            </object>
+          </child>
+          <child>
+            <object class="GtkShortcutsGroup">
+              <property name="title" translatable="yes">General</property>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Show sidebar</property>
+                  <property name="accelerator">F9</property>
+                </object>
+              </child>
+              <child>
+                <object class="GtkShortcutsShortcut">
+                  <property name="title" translatable="yes">Shortcuts</property>
+                  <property name="accelerator">&lt;Control&gt;question</property>
+                </object>
+              </child>
+            </object>
+          </child>
+        </object>
+      </child>
+    </object>
+</interface>

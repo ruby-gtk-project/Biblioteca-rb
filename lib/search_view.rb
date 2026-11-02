@@ -16,18 +16,17 @@ require_relative 'fzy'
 #   per search term) -> Gtk::SortListModel (a Gtk::CustomSorter over a `score`
 #   property the filter sets as a side effect) -> Gtk::SingleSelection
 #
-# and this port cannot use the middle two. GtkCustomSortFunc takes its two
-# items as `gconstpointer`, which carries no type information, so the Ruby
-# bindings hand the callback a pair of raw addresses rather than the
-# DocumentationPages: a Gtk::CustomSorter cannot compare objects here at all.
+# Here the filtering and the sorting both happen in Ruby, in one pass per
+# search term, and the result is spliced into a plain Gio::ListStore the
+# selection model sits on: no Gtk::FilterListModel and no Gtk::SortListModel.
+# It is the same work — upstream's filter already visits every page and its
+# sorter already orders every match — and the resulting order is identical
+# (lib/search_view.rb#rank). What it gives up is the incremental re-filtering
+# GtkFilterListModel does when the underlying store changes, which costs
+# nothing here: the flattened set of pages is built once and never changes.
 #
-# So the filtering and the sorting both happen in Ruby, in one pass per search
-# term, and the result is spliced into a plain Gio::ListStore the selection
-# model sits on. It is the same work — upstream's filter already visits every
-# page and its sorter already orders every match. What it gives up is the
-# incremental re-filtering GtkFilterListModel does when the underlying store
-# changes, which matters not at all: the flattened set of pages is built once
-# and never changes afterwards.
+# Why a Gtk::CustomSorter is not an option in Ruby is in FINDINGS.md,
+# "GtkCustomSortFunc reaches Ruby as a pair of addresses".
 #
 # The ranked pages are also kept in a Ruby array, and that array — not
 # selection_model.selected_item — is what every read goes through, so a page is

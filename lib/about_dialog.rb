@@ -3,14 +3,18 @@
 require 'adwaita'
 
 require_relative 'biblioteca/rb/version'
+require_relative 'package'
 
 # AboutDialog is the About Biblioteca dialog.
 #
 # A direct port of upstream's src/about.js, with the same metadata, the same
 # credit list and the same Contributors section it adds by hand. The version
-# comes from this gem rather than from pkg.version, and the application icon
-# follows the application id the port registers under.
+# comes from this gem rather than from pkg.version, and the application icon is
+# Package.icon_name, which is the id the port registers under and the basename
+# of the icon data/icons/hicolor installs.
 class AboutDialog
+  include Package::Translatable
+
   APPLICATION_NAME = 'Biblioteca'
   DEVELOPER_NAME = 'Akshay Warrier'
   COPYRIGHT = '© 2024 Akshay Warrier'
@@ -47,11 +51,11 @@ class AboutDialog
       d.license_type = :gpl_3_0_only
       d.version = Biblioteca::Rb::VERSION
       d.website = WEBSITE
-      d.application_icon = @app.application_id
+      d.application_icon = Package.icon_name
       d.issue_url = ISSUE_URL
       d.developers = DEVELOPERS
       d.artists = ARTISTS
-      d.add_credit_section('Contributors', CONTRIBUTORS)
+      d.add_credit_section(_('Contributors'), CONTRIBUTORS)
     end
   end
 end

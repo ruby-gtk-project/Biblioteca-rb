@@ -5,6 +5,7 @@ require 'adwaita'
 require_relative 'browse_view'
 require_relative 'doc_index'
 require_relative 'documentation_page'
+require_relative 'package'
 require_relative 'search_view'
 require_relative 'sidebar_menu'
 require_relative 'theme_selector'
@@ -32,6 +33,9 @@ require_relative 'zoom_buttons'
 # it. There is no build step here, so the index is read from the user's cache
 # directory and built by DocIndex on the first run that finds nothing there.
 class Sidebar
+  include Package::Translatable
+
+  # src/sidebar/Sidebar.blp:5 — not translated upstream.
   TITLE = 'Biblioteca'
 
   BROWSE = 'browse'
@@ -86,6 +90,14 @@ class Sidebar
     stack.visible_child_name = BROWSE
   end
 
+  # The uri of the namespace the sidebar opens on — Gtk-4.0 — read out of the
+  # index that has already been built, so the window can open its first tab on
+  # a page that exists on this machine. nil when the GTK documentation is not
+  # installed, which is the same thing DocIndex#start_index reports as -1.
+  def start_uri
+    doc_index.fetch('docs', [])[start_index].then { |item| item&.fetch('uri', nil) }
+  end
+
   def focus_search
     search_entry.grab_focus
     search_entry.select_region(0, -1)
@@ -104,7 +116,7 @@ class Sidebar
     @menu_button ||= Gtk::MenuButton.new.tap do |button|
       button.menu_model = menu.model
       button.icon_name = 'open-menu-symbolic'
-      button.tooltip_text = 'Main Menu'
+      button.tooltip_text = _('Main Menu')
       # primary: F10 opens it, as it does in every GNOME app.
       button.primary = true
     end
@@ -128,7 +140,7 @@ class Sidebar
     @search_entry ||= Gtk::SearchEntry.new.tap do |entry|
       entry.search_delay = 200
       entry.hexpand = true
-      entry.placeholder_text = 'Search Biblioteca'
+      entry.placeholder_text = _('Search Biblioteca')
     end
   end
 
@@ -140,8 +152,8 @@ class Sidebar
 
   def status_page
     @status_page ||= Adwaita::StatusPage.new.tap do |sp|
-      sp.title = 'No Results Found'
-      sp.description = 'Try a different search term'
+      sp.title = _('No Results Found')
+      sp.description = _('Try a different search term')
       sp.icon_name = 'edit-find-symbolic'
       sp.add_css_class('compact')
     end

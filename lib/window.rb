@@ -3,7 +3,9 @@
 require 'adwaita'
 require 'webkit-gtk'
 
+require_relative 'doc_index'
 require_relative 'find_overlay'
+require_relative 'package'
 require_relative 'shortcuts_window'
 require_relative 'sidebar'
 require_relative 'web_view'
@@ -16,7 +18,7 @@ require_relative 'window_state'
 # the blueprint's, and the `win.*` action group is window.js's, one action per
 # method.
 #
-# Four things worth knowing:
+# Six things worth knowing:
 #
 #   * a tab's child is a FindOverlay, not the web view — the find bar has to
 #     float over the page — so reaching a tab's web view means going through
@@ -36,9 +38,31 @@ require_relative 'window_state'
 #     mechanisms would hide half of them.
 #   * the header bar shows a window title for a local page and a URL bar for a
 #     remote one, which is what WebView's is_online? decides.
+#   * the header bar's title is content_page's title, as src/window.blp:58
+#     binds it, so it reads "Documentation" until the first page title arrives.
+#     #on_title_changed writes content_page.title and the header follows.
+#   * upstream writes `this._webview` — the *selected* view — from its title,
+#     uri and progress handlers without checking which view emitted
+#     (src/window.js:200-233), so a background tab finishing a load moves the
+#     foreground tab's progress bar and, for a moment, its title. This port
+#     guards every one of those handlers on `view.equal?(webview)` instead. It
+#     is a divergence, and it is deliberate: upstream has a bug here. See
+#     FINDINGS.md, "Background tab load drives the foreground progress bar".
 class Window
+  include Package::Translatable
+
+  # src/window.blp:9 — not translated upstream.
   TITLE = 'Biblioteca'
-  DEFAULT_URI = ShortcutsWindow::DEFAULT_URI
+
+  # src/window.blp:30, the title content_page starts at.
+  DOCUMENTATION_TITLE = _('Documentation')
+
+  # The documentation tree a new tab opens on when the built index has no
+  # Gtk-4.0 node to point at. Upstream hardcodes
+  # file:///app/share/doc/gtk4/index.html because it only ever runs inside its
+  # Flatpak (src/window.blp:108); the root here is DocIndex.default_root, the
+  # first of DocIndex::DEFAULT_ROOTS that exists on this machine.
+  FALLBACK_DOC_PATH = 'gtk4/index.html'
 
   # The breakpoint conditions from src/window.blp.
   NARROW_WINDOW = 'max-width: 850sp'
@@ -84,6 +108,7 @@ class Window
     @settings = settings
     @devel = devel
     @overlays = {}
+    @handlers = {}
     @sidebar = Sidebar.new
   end
 
@@ -165,7 +190,7 @@ class Window
   # --- Window actions ------------------------------------------------------
 
   # Appends a tab on a fresh web view and selects it.
-  def new_tab(uri = DEFAULT_URI)
+  def new_tab(uri = default_uri)
     WebView.new(uri: uri, on_online_changed: method(:on_webview_online))
            .then { |view| FindOverlay.new(view.build) }
            .then { |overlay| attach_tab(overlay) }
@@ -274,7 +299,7 @@ class Window
 
   # Adwaita::NavigationPage takes its child and title positionally, so the
   # breakpoint bin has to exist first.
-  def content_page = @content_page ||= Adwaita::NavigationPage.new(breakpoint_bin, 'Documentation')
+  def content_page = @content_page ||= Adwaita::NavigationPage.new(breakpoint_bin, DOCUMENTATION_TITLE)
 
   def breakpoint_bin
     @breakpoint_bin ||= Adwaita::BreakpointBin.new.tap do |bin|
@@ -295,7 +320,10 @@ class Window
 
   def content_header_bar = @content_header_bar ||= Adwaita::HeaderBar.new
   def header_bar_stack = @header_bar_stack ||= Gtk::Stack.new
-  def window_title = @window_title ||= Adwaita::WindowTitle.new(TITLE, '')
+  # src/window.blp:58 binds this to content_page.title, so the header reads
+  # "Documentation" before any page has loaded. #connect_signals keeps the two
+  # in step afterwards.
+  def window_title = @window_title ||= Adwaita::WindowTitle.new(content_page.title, '')
 
   def url_bar_clamp = @url_bar_clamp ||= Adwaita::Clamp.new.tap { |clamp| clamp.child = url_bar }
 
@@ -311,7 +339,7 @@ class Window
   def sidebar_button
     @sidebar_button ||= Gtk::ToggleButton.new.tap do |button|
       button.icon_name = 'sidebar-show-symbolic'
-      button.tooltip_text = 'Open Sidebar'
+      button.tooltip_text = _('Open Sidebar')
       button.visible = false
       button.add_css_class('flat')
     end
@@ -326,7 +354,7 @@ class Window
   def back_button
     @back_button ||= Gtk::Button.new.tap do |button|
       button.icon_name = 'go-previous-symbolic'
-      button.tooltip_text = 'Back'
+      button.tooltip_text = _('Back')
       button.action_name = 'win.navigation-back'
       button.add_css_class('flat')
     end
@@ -335,7 +363,7 @@ class Window
   def forward_button
     @forward_button ||= Gtk::Button.new.tap do |button|
       button.icon_name = 'go-next-symbolic'
-      button.tooltip_text = 'Forward'
+      button.tooltip_text = _('Forward')
       button.action_name = 'win.navigation-forward'
       button.add_css_class('flat')
     end
@@ -344,9 +372,9 @@ class Window
   def new_tab_button
     @new_tab_button ||= Gtk::Button.new.tap do |button|
       button.icon_name = 'tab-new-symbolic'
-      button.tooltip_text = 'New Tab'
+      button.tooltip_text = _('New Tab')
       button.action_name = 'win.new-tab'
-      button.action_target = GLib::Variant.new(DEFAULT_URI)
+      button.action_target = GLib::Variant.new(default_uri)
       button.add_css_class('flat')
     end
   end
@@ -378,8 +406,8 @@ class Window
   # all_shortcuts is the blueprint's `shortcuts: all_shortcuts`: the tab view
   # binds Ctrl+Tab, Ctrl+Page_Up/Down, Ctrl+Home/End, their Shift variants for
   # reordering, and Alt+1..0 itself. Those are the accelerators the shortcuts
-  # dialog lists under "Tabs" but ShortcutsWindow::ACCELS deliberately leaves
-  # out.
+  # dialog lists under "Tabs"; ShortcutsWindow#accels does not bind them,
+  # because binding them at the application would shadow the tab view's own.
   def tab_view
     @tab_view ||= Adwaita::TabView.new.tap do |view|
       view.vexpand = true
@@ -399,7 +427,25 @@ class Window
     )
   end
 
-  def shortcuts = @shortcuts ||= ShortcutsWindow.new(@app, window)
+  def shortcuts = @shortcuts ||= ShortcutsWindow.new(@app, window, default_uri: default_uri)
+
+  # The uri a new tab opens on: the Gtk-4.0 node's uri from the index the
+  # sidebar has already built, so that the page the New Tab button, Ctrl+T and
+  # the first tab land on is one that exists on this machine. Falls back to the
+  # same tree under the first documentation root that does exist.
+  def default_uri
+    @default_uri ||= sidebar.start_uri || fallback_uri
+  end
+
+  # Only reached when the index has no Gtk-4.0 node — the GTK documentation is
+  # not installed anywhere DocIndex looks. DEFAULT_ROOTS.first is upstream's
+  # /app/share/doc, which is the right last resort: inside a Flatpak it is
+  # also the right first one.
+  def fallback_uri
+    (DocIndex.default_root || DocIndex::DEFAULT_ROOTS.first).then do |root|
+      "file://#{root}/#{FALLBACK_DOC_PATH}"
+    end
+  end
 
   # The web view and find overlay of the tab that is currently selected.
   def webview = @webview
@@ -407,9 +453,11 @@ class Window
 
   private
 
+    # Only the property is set. The zoom row follows from
+    # notify::zoom-level, so a zoom WebKit makes by itself — ctrl+scroll, or a
+    # pinch — moves the label too.
     def apply_zoom(view, level)
       view.zoom_level = level
-      sidebar.zoom_buttons.zoom_level = level
     end
 
     def install_actions
@@ -441,7 +489,10 @@ class Window
       tab_overview.signal_connect('create-tab') { new_tab }
 
       tab_view.signal_connect('notify::selected-page') { update_webview }
-      tab_view.signal_connect('page-detached') { |_, page, _| @overlays.delete(page) }
+      tab_view.signal_connect('page-detached') { |_, page, _| release_tab(page) }
+
+      # src/window.blp:58's `title: bind content_page.title`.
+      content_page.signal_connect('notify::title') { window_title.title = content_page.title }
 
       url_bar.signal_connect('activate') { on_activate_url_bar }
 
@@ -523,12 +574,31 @@ class Window
       end
     end
 
-    # Everything upstream set up as a property binding per tab.
+    # Everything upstream set up as a property binding per tab. Upstream's
+    # bindings are owned by the view and die with it; these handlers close over
+    # `page` and `view`, so their ids are recorded and #release_tab disconnects
+    # them when the tab goes.
     def connect_webview(view, page)
-      view.signal_connect('notify::title') { on_title_changed(view, page) }
-      view.signal_connect('notify::uri') { on_uri_changed(view) }
-      view.signal_connect('notify::estimated-load-progress') { on_load_progress(view) }
-      view.signal_connect('load-changed') { |_, event| on_load_changed(page, event) }
+      @handlers[page] = [
+        view.signal_connect('notify::title') { on_title_changed(view, page) },
+        view.signal_connect('notify::uri') { on_uri_changed(view) },
+        view.signal_connect('notify::estimated-load-progress') { on_load_progress(view) },
+        view.signal_connect('notify::zoom-level') { on_zoom_changed(view) },
+        view.signal_connect('load-changed') { |_, event| on_load_changed(page, event) },
+      ]
+    end
+
+    # The tab is gone: drop the overlay and disconnect the five handlers that
+    # were connected for it, so a long session does not accumulate one set per
+    # tab ever opened.
+    def release_tab(page)
+      @overlays.delete(page).then do |overlay|
+        @handlers.delete(page).to_a.each do |id|
+          if overlay&.webview&.signal_handler_is_connected?(id)
+            overlay.webview.signal_handler_disconnect(id)
+          end
+        end
+      end
     end
 
     # The title reaches three places: the tab, the content page's header, and
@@ -540,8 +610,16 @@ class Window
           page.title = title
           content_page.title = title
           window.title = "#{title} - #{TITLE}"
-          window_title.title = title
         end
+      end
+    end
+
+    # Upstream's `bind_property("zoom-level", zoom_buttons, ...)` with
+    # SYNC_CREATE (src/window.js:231). Only the selected view's level is shown,
+    # which is the view upstream rebinds on every tab switch.
+    def on_zoom_changed(view)
+      if view.equal?(webview)
+        sidebar.zoom_buttons.zoom_level = view.zoom_level
       end
     end
 
@@ -589,7 +667,7 @@ class Window
           if overlay
             @find_overlay = overlay
             @webview = overlay.webview
-            sidebar.zoom_buttons.zoom_level = @webview.zoom_level
+            on_zoom_changed(@webview)
             update_buttons
             on_title_changed(@webview, page)
             on_webview_online(@webview)

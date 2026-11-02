@@ -29,10 +29,10 @@ class WebView < WebKitGtk::WebView
   # Gdk::BUTTON_MIDDLE, as WebKit reports it on a navigation action.
   MIDDLE_BUTTON = 2
 
-  # The scheme part of a URI, per RFC 3986. Upstream reads it with
-  # GLib::Uri.peek_scheme; the Ruby bindings do not carry GLib::Uri, and a
-  # scheme is a short enough grammar to match outright. nil for a string with
-  # no scheme at all, which is what peek_scheme returns too.
+  # The scheme part of a URI, per RFC 3986, matched here rather than read with
+  # GLib::Uri.peek_scheme as upstream does (src/WebView.js). nil for a string
+  # with no scheme at all, which is what peek_scheme returns too. See
+  # FINDINGS.md, "GLib::Uri is not in the Ruby bindings".
   SCHEME_PATTERN = /\A([a-zA-Z][a-zA-Z0-9+.\-]*):/
 
   def self.scheme_of(uri) = uri.to_s[SCHEME_PATTERN, 1]

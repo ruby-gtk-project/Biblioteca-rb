@@ -1,0 +1,13 @@
+[Desktop Entry]
+# TRANSLATORS: Don't translate
+Name=Biblioteca
+Comment=Learn and prototype with GNOME technologies
+Exec=biblioteca %U
+Terminal=false
+Type=Application
+Categories=Development;GNOME;GTK;
+Icon=org.rubygtkproject.Biblioteca
+# TRANSLATORS: Don't translate
+Keywords=GTK;libadwaita;doc;documentation;api;manual;devhelp;
+DBusActivatable=true
+StartupNotify=true

@@ -15,15 +15,19 @@ require 'fileutils'
 # per symbol carrying the name, the symbol kind and the file:// URI of its
 # page.
 #
-# Two deliberate differences from upstream:
+# The documentation root is a constructor argument, defaulting to the first of
+# DEFAULT_ROOTS that exists. Upstream hardcodes /app/share/doc because it only
+# ever runs inside its Flatpak build; a checkout on a developer's machine has
+# the GNOME docs under /usr/share/doc instead.
 #
-#   * the documentation root is a constructor argument. Upstream hardcodes
-#     /app/share/doc because it only ever runs inside its Flatpak build; a
-#     checkout being run from a developer's machine has the GNOME docs
-#     somewhere else, so DEFAULT_ROOTS is tried in order and the first
-#     directory that exists wins.
-#   * upstream reads every library concurrently with promises. Nothing here is
-#     waiting on anything but the filesystem, so this walks them in order.
+# Every other consumer of that root derives it from here rather than spelling
+# /app out again: Window::FALLBACK_DOC_ROOT is DEFAULT_ROOTS.first, and the uri
+# a new tab opens on is Sidebar#start_uri, read out of the built index
+# (lib/window.rb#default_uri).
+#
+# Libraries are read one after another. Upstream reads them concurrently with
+# promises; nothing here waits on anything but the filesystem, and the
+# resulting index is identical.
 #
 # Upstream's ordering is reproduced exactly: the tree is built in SECTION_TYPES
 # order and then sorted by name at every level, which is what actually decides

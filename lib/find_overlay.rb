@@ -2,6 +2,7 @@
 
 require 'webkit-gtk'
 
+require_relative 'package'
 require_relative 'web_view'
 
 # FindOverlay is the find-in-page bar that floats over the top right corner of
@@ -19,6 +20,8 @@ require_relative 'web_view'
 # next/previous walk it round, wrapping, because the search itself is run with
 # WRAP_AROUND.
 class FindOverlay
+  include Package::Translatable
+
   MAX_MATCH_COUNT = 1000
 
   # css-name is construct-only on GtkWidget, so the one node that has to *be*
@@ -172,7 +175,7 @@ class FindOverlay
   def previous_button
     @previous_button ||= Gtk::Button.new.tap do |button|
       button.icon_name = 'go-up-symbolic'
-      button.tooltip_text = 'Show Previous Result'
+      button.tooltip_text = _('Show Previous Result')
       button.action_name = 'win.find-prev'
     end
   end
@@ -180,7 +183,7 @@ class FindOverlay
   def next_button
     @next_button ||= Gtk::Button.new.tap do |button|
       button.icon_name = 'go-down-symbolic'
-      button.tooltip_text = 'Show Next Result'
+      button.tooltip_text = _('Show Next Result')
       button.action_name = 'win.find-next'
     end
   end
@@ -188,7 +191,7 @@ class FindOverlay
   def close_button
     @close_button ||= Gtk::Button.new.tap do |button|
       button.icon_name = 'window-close-symbolic'
-      button.tooltip_text = 'Close Search'
+      button.tooltip_text = _('Close Search')
       button.action_name = 'win.close-find'
       button.add_css_class('circular')
     end

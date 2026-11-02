@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<schemalist gettext-domain="org.rubygtkproject.Biblioteca">
+  <schema id="org.rubygtkproject.Biblioteca" path="/org/rubygtkproject/Biblioteca/">
+    <key name="color-scheme" type="i">
+      <default>0</default>
+    </key>
+    <key name="window-width" type="i">
+      <default>0</default>
+    </key>
+    <key name="window-height" type="i">
+      <default>0</default>
+    </key>
+    <key name="window-maximized" type="b">
+      <default>false</default>
+    </key>
+    <key name="window-fullscreened" type="b">
+      <default>false</default>
+    </key>
+  </schema>
+</schemalist>

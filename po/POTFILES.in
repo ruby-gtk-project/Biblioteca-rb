@@ -1,0 +1,30 @@
+# Every file in this port that carries a translatable string, plus every lib
+# file that does not — so that a string added to one of them is extracted
+# without anybody having to remember this list.
+#
+# Upstream has no POTFILES.in: it ships no po/ directory at all.
+data/app.desktop
+data/app.metainfo.xml
+data/ui/shortcuts.ui
+lib/about_dialog.rb
+lib/biblioteca.rb
+lib/biblioteca/application.rb
+lib/biblioteca/rb.rb
+lib/biblioteca/rb/version.rb
+lib/browse_view.rb
+lib/doc_index.rb
+lib/documentation_page.rb
+lib/find_overlay.rb
+lib/fzy.rb
+lib/package.rb
+lib/search_view.rb
+lib/settings.rb
+lib/shortcuts_window.rb
+lib/sidebar.rb
+lib/sidebar_menu.rb
+lib/style.rb
+lib/theme_selector.rb
+lib/web_view.rb
+lib/window.rb
+lib/window_state.rb
+lib/zoom_buttons.rb

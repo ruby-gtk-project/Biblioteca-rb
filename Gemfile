@@ -67,3 +67,8 @@ group :development do
 end
 gem "adwaita"
 gem "webkit-gtk"
+
+# The app's own translatable strings go through the gettext gem. glib2 only
+# exposes GLib::GetText.bindtextdomain, which is libintl's and covers GTK's own
+# strings and the .ui file GtkBuilder translates, not _() in Ruby.
+gem "gettext"

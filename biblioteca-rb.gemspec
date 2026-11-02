@@ -78,7 +78,10 @@ Gem::Specification.new do |spec|
     *enumerate_package_files.call("exe"),
     # Extra package files configured by .structuredmerge/kettle-jem.yml
     *enumerate_package_glob.call(File.join(gemspec_root, "data/**/*")),
-    *enumerate_package_glob.call(File.join(gemspec_root, "po/**/*"))
+    *enumerate_package_glob.call(File.join(gemspec_root, "po/**/*")),
+    # `rake data:install` and `rake schema:compile` stand in for upstream's
+    # data/meson.build, so they have to reach the installed gem too.
+    *enumerate_package_files.call("rakelib")
   ]
   spec.rdoc_options += [
     "--title",

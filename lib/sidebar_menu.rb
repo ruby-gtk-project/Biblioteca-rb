@@ -2,6 +2,8 @@
 
 require 'adwaita'
 
+require_relative 'package'
+
 # SidebarMenu is the model behind the sidebar header bar's main menu button.
 #
 # Ported from the `menu menu_app` block at the bottom of upstream's
@@ -17,23 +19,27 @@ require 'adwaita'
 # popover that Sidebar fills with `popover.add_child(widget, id)`, which is
 # how a GTK menu model carries a real widget.
 class SidebarMenu
+  include Package::Translatable
+
   THEME_SELECTOR_ID = 'themeswitcher'
   ZOOM_BUTTONS_ID = 'zoom_buttons'
 
+  BOOKMARKS_TITLE = _('Bookmarks')
+
   BOOKMARKS = {
-    'Developer Documentation'    => 'https://developer.gnome.org/documentation/index.html',
-    'Human Interface Guidelines' => 'https://developer.gnome.org/hig/',
-    'JavaScript'                 => 'https://gjs.guide',
-    'Vala'                       => 'https://valadoc.org/',
-    'Rust'                       => 'https://gtk-rs.org',
-    'Python'                     => 'https://pygobject.readthedocs.io/',
-    'Blueprint'                  => 'https://gnome.pages.gitlab.gnome.org/blueprint-compiler/',
-    'DevDocs'                    => 'https://devdocs.io/',
+    _('Developer Documentation')    => 'https://developer.gnome.org/documentation/index.html',
+    _('Human Interface Guidelines') => 'https://developer.gnome.org/hig/',
+    _('JavaScript')                 => 'https://gjs.guide',
+    _('Vala')                       => 'https://valadoc.org/',
+    _('Rust')                       => 'https://gtk-rs.org',
+    _('Python')                     => 'https://pygobject.readthedocs.io/',
+    _('Blueprint')                  => 'https://gnome.pages.gitlab.gnome.org/blueprint-compiler/',
+    _('DevDocs')                    => 'https://devdocs.io/',
   }.freeze
 
   ABOUT_SECTION = {
-    'Keyboard Shortcuts' => 'app.shortcuts',
-    'About Biblioteca'   => 'app.about',
+    _('Keyboard Shortcuts') => 'app.shortcuts',
+    _('About Biblioteca')   => 'app.about',
   }.freeze
 
   def model
@@ -57,7 +63,7 @@ class SidebarMenu
 
     def bookmarks_section
       Gio::Menu.new.tap do |section|
-        section.append_submenu('Bookmarks', bookmarks_submenu)
+        section.append_submenu(BOOKMARKS_TITLE, bookmarks_submenu)
       end
     end
 

@@ -4,6 +4,7 @@ require "gtk4"
 require "adwaita"
 
 require_relative "../about_dialog"
+require_relative "../package"
 require_relative "../settings"
 require_relative "../style"
 require_relative "../window"
@@ -11,21 +12,21 @@ require_relative "../window"
 module Biblioteca
   # The port's application object.
   #
-  # Ported from upstream's src/application.js, src/actions.js and src/main.js,
-  # which between them register the application, load the stylesheet, add the
-  # app-level actions (quit, about, and the stateful color-scheme action the
-  # theme selector drives), keep Adwaita's style manager in step with the
-  # color-scheme setting, and open a single window on activation.
+  # Ported from upstream's src/application.js, src/actions.js, src/main.js and
+  # the startup half of src/bin.js, which between them set the application
+  # name, initialise gettext, register the application, load the stylesheet,
+  # add the app-level actions (quit, about, and the stateful color-scheme
+  # action the theme selector drives), keep Adwaita's style manager in step
+  # with the color-scheme setting, and open a single window on activation.
+  #
+  # The application id, the icon name, the GSettings schema id, the gettext
+  # domain and the .desktop basename all come from Package, which is where
+  # upstream's `pkg.name` ends up.
   #
   # House style (see .claude/skills/ruby-gtk): every widget is a memoized
   # method, all configuration lives in its `tap`, assembly happens only in
   # `build`, and the launcher is one expression.
   class Application
-    # Upstream registers as app.drey.Biblioteca. The port keeps its own id so
-    # that running it does not collide on the session bus with an installed
-    # copy of the original.
-    APP_ID = "org.rubygtkproject.Biblioteca"
-
     OPTION_CONTEXT_DESCRIPTION = "<https://biblioteca.sonny.re>"
 
     # Adwaita::ColorScheme, in value order. The color-scheme setting holds the
@@ -40,10 +41,18 @@ module Biblioteca
     ].freeze
 
     def build
+      # src/bin.js:18 and src/main.js:4, both of which run before the
+      # application object exists.
+      Package.set_application_name
+      Package.init_gettext
+
       app.tap do |a|
-        # startup fires once per process; the stylesheet only wants loading
-        # onto the display once.
-        a.signal_connect("startup") { Style.load }
+        # startup fires once per process; the stylesheet and the bundled icon
+        # directory only want registering on the display once.
+        a.signal_connect("startup") do
+          Style.load
+          register_icons
+        end
 
         a.signal_connect("activate") do
           apply_color_scheme
@@ -63,17 +72,32 @@ module Biblioteca
     def app
       @app ||= begin
         Adwaita.init
-        Gtk::Application.new(APP_ID, :default_flags)
+        Gtk::Application.new(Package.app_id, :default_flags)
       end
     end
 
+    # src/bin.js:24 — `globalThis.__DEV__ = pkg.name.endsWith(".Devel")`. The
+    # window draws the striped development header bar when this is true.
+    def devel? = app.application_id.to_s.end_with?(Package::DEVEL_SUFFIX)
+
     def settings = @settings ||= Settings.new
 
-    def window = @window ||= Window.new(app, settings: settings)
+    def window = @window ||= Window.new(app, settings: settings, devel: devel?)
 
     def style_manager = @style_manager ||= Adwaita::StyleManager.default
 
+    def icon_theme = @icon_theme ||= Gtk::IconTheme.get_for_display(Gdk::Display.default)
+
     private
+
+      # The seven symbolic icons upstream imports into its GResource
+      # (src/icons/, imported from src/window.js and src/sidebar/Sidebar.js)
+      # plus the application icons, all shipped under data/icons as a hicolor
+      # tree. Adding the directory to the icon theme's search path is what
+      # makes `icon-name: "tab-new-symbolic"` resolve.
+      def register_icons
+        icon_theme.add_search_path(Package.icon_dir)
+      end
 
       def setup_actions
         add_quit_action
