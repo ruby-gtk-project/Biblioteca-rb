@@ -120,10 +120,29 @@ require 'gtk4'
 Gtk::CheckButton.new.respond_to?(:update_property)   # => false
 ```
 
-**What the port does instead:** sets the string as the button's tooltip only.
-A screen reader announces the tooltip rather than a dedicated accessible
-label. This is a real, user-visible gap and is recorded as one in
-`COMPONENT_PARITY.md`.
+**What the port does instead:** builds each check button from a GtkBuilder
+document that carries the `<accessibility>` block, then sets the rest of its
+properties on the instance. GtkBuilder parses accessible properties itself and
+never goes near the introspected setter, so the label does get set — this is
+the same escape hatch `lib/find_overlay.rb` uses for a construct-only
+`css-name` (#3).
+
+```ruby
+require 'gtk4'
+ui = <<~XML
+  <interface>
+    <object class="GtkCheckButton" id="b">
+      <accessibility><property name="label">Dark style</property></accessibility>
+    </object>
+  </interface>
+XML
+Gtk::Builder.new(string: ui)['b']   # => #<Gtk::CheckButton>, no warning
+```
+
+What is still missing is a way to *read* the property back, so the label is
+verified by the builder accepting the document and by the button it hands back
+working (`test/drive_app.rb`, "the theme selector has three choices" and the
+two swatch steps), not by reading the accessible node.
 
 ---
 
@@ -211,3 +230,39 @@ removes it, the two gesture rows are what will have to be rebuilt by hand.
 It looks like a typo for `<Control>Home` and it is not one:
 `gtk_accelerator_parse` accepts `<Ctrl>` and `<Ctl>` as aliases for
 `<Control>`. `data/ui/shortcuts.ui` carries upstream's bytes unchanged.
+
+---
+
+## 9. Not a port bug: the two gesture rows warn on every shortcuts window
+
+Opening the keyboard-shortcuts window prints, exactly twice:
+
+```
+Gtk-WARNING **: GtkLabel 0x… (label) reported min width -3, but sizes must be >= 0
+```
+
+**Where it comes from:** the two `GtkShortcutsShortcut`s whose
+`shortcut-type` is `gesture_two_finger_swipe_right` / `_left`
+(`data/ui/shortcuts.ui`, from `src/Shortcuts.blp`). A gesture row swaps its
+accelerator label for the swipe illustration and leaves the label it is no
+longer measuring in a state where it reports a negative minimum width; GTK
+clamps the value and draws the row correctly. Two gesture rows, two warnings,
+every time the window is constructed — not once per presentation.
+
+**Reproduction:** build the window and never show it. The warnings are emitted
+during construction, before `present`:
+
+```ruby
+ShortcutsWindow.new(app, window, default_uri: 'file:///x').install
+# => two GtkLabel min width -3 warnings
+```
+
+**Why nothing here changes:** the markup is upstream's, the rows are two of
+upstream's 26 shortcuts, and the only way to silence the warning is to drop the
+gesture illustration — which is the behaviour being ported. The warning is
+GTK's, is harmless, and upstream's own build prints it too. Recorded so the
+next person reading `test/drive_app.rb`'s output does not go looking for it in
+the port.
+
+**Reported upstream:** no — a GTK defect in a widget GTK has already
+deprecated (see #7). Not filed.

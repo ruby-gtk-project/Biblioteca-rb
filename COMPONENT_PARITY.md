@@ -10,13 +10,28 @@
 This is the port's own ledger, appended to as units land. `.reports/` is an
 audit of the port; this file is what the port owes and what it has paid.
 
-**Verification status, stated once and applying to every row below:** no row in
-this file has been exercised in a running GTK process. The `gtk4`, `adwaita`,
-`webkit-gtk` and `gettext` gems are not installed in this checkout
-(`bundle exec ruby -e 'require "gtk4"'` raises `LoadError`), so every claim
-here rests on reading the upstream source, reading the bindings' own source and
-GIR, and `ruby -c`. Each row says which API calls in it are unverified at
-runtime.
+**Verification status, stated once and applying to every row below.** The port
+now runs. `nix/Gemfile` carries the four runtime gems the code actually
+requires — `gtk4`, `adwaita`, `webkit-gtk` and `gettext`, pinned to the 4.3.9
+release train — so `nix develop --command xvfb-run -a ruby exe/biblioteca`
+opens the window, and two driver scripts walk it:
+
+* `test/drive_app.rb` boots `Biblioteca::Application` as `exe/biblioteca` does
+  and activates all 16 `win.*` actions, `app.about`, `app.shortcuts` and both
+  `app.color-scheme` targets, opening the main menu — and with it the theme
+  selector and the zoom row — in between. 28 steps.
+* `test/drive_sidebar.rb` writes a gi-docgen fixture root, reads it through the
+  real `DocIndex` and drives a real `Sidebar` in a real window: the tree's
+  nesting and ordering, expansion and `collapse_all_rows`, fuzzy search, the
+  `kind:` prefix and all three sidebar stack pages. 24 steps.
+
+Both exit 0 on this checkout. What that does **not** cover: the tree and search
+steps in `test/drive_app.rb` skip on a machine with no gi-docgen documentation
+installed (this one has none, which is why `test/drive_sidebar.rb` supplies its
+own); nothing drives a pointer or a keyboard, so the gesture and middle-click
+paths are reached only through the actions they end in; and the rows below that
+name a specific unverified call still name it, because activating an action is
+not the same as checking what it drew.
 
 ---
 
@@ -35,7 +50,7 @@ runtime.
 | 9 | dialog not modal; two-level grouping flattened | closed |
 | 10 | zoom percentage goes stale | closed |
 | 11 | `ThemeSelector` was invented, not ported | closed, with one new gap (row 11a) |
-| 11a | theme-selector buttons have no accessible label | **open** |
+| 11a | theme-selector buttons have no accessible label | closed |
 | 12 | `WindowState` was guessed, not ported | closed |
 | 13 | the `devel` CSS class can never be applied | closed |
 | 14 | `GLib.set_application_name` never called | closed |
@@ -173,12 +188,17 @@ Unverified at runtime: `Adwaita::StyleManager#system_supports_color_schemes?`
 and `#dark?` are the predicate spellings ruby-gnome generates for
 `adw_style_manager_get_*`; neither has been called.
 
-#### 11a — open: the accessible labels
+#### 11a — the accessible labels
 
 `ThemeSelector.blp` gives each button an `accessibility { label: … }` block as
-well as a tooltip. This port sets the tooltip only, so a screen reader
-announces the tooltip rather than a dedicated accessible label. Cause and
-reproduction: `FINDINGS.md` #4.
+well as a tooltip, and for a while this port set the tooltip only. Both are set
+now: `ThemeSelector::BUTTON_UI` is a two-line GtkBuilder document carrying the
+`<accessibility>` block, `#labelled_button` instantiates each check button from
+it with the gettext-translated label interpolated in (XML-escaped), and
+`#button` sets the style classes, the tooltip, the action name and the int32
+action target on the instance afterwards. No `gtk_accessible_update_property`
+is involved, which is what made it impossible before; cause and reproduction in
+`FINDINGS.md` #4.
 
 ### 12 — `WindowState`
 

@@ -16,12 +16,28 @@ begin
   end
 rescue LoadError => error
   # check the error message and re-raise when unexpected
-  raise error unless error.message.include?("kettle")
+  unless error.message.include?("kettle")
+    raise error
+  end
 end
 
 # External RSpec & related config
-require "kettle/test/rspec"
-# `kettle/test/rspec` installs harness helpers documented in spec/README.md.
+#
+# The kettle-dev bundle at the repo root has this; the Nix dev shell does not,
+# because nix/Gemfile carries the app's runtime gems only and kettle-test pulls
+# a whole development stack behind it. The suite itself is plain RSpec, so a
+# missing harness costs nothing but the extra helpers in spec/README.md, and
+# running `ruby -e 'RSpec::Core::Runner.run(...)'` from the dev shell — which is
+# the command that shell's banner prints — has to work.
+begin
+  require "kettle/test/rspec"
+  # `kettle/test/rspec` installs harness helpers documented in spec/README.md.
+rescue LoadError => error
+  # check the error message and re-raise when unexpected
+  unless error.message.include?("kettle")
+    raise error
+  end
+end
 
 # This library
 require "biblioteca/rb"

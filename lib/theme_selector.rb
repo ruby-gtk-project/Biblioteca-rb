@@ -24,10 +24,14 @@ require_relative 'package'
 #     draw the checkmark against the right background;
 #   * the stylesheet is loaded onto the display once per process.
 #
-# One thing ThemeSelector.blp has that this does not: each button's
-# `accessibility { label: ... }`. Here the label reaches the button as its
-# tooltip only, so a screen reader announces the tooltip rather than a
-# dedicated accessible label. See FINDINGS.md.
+# Each button carries both halves of ThemeSelector.blp's annotation: the
+# tooltip and the `accessibility { label: ... }`. The accessible label cannot be
+# set through a method — `gtk_accessible_update_property` is variadic and its
+# introspectable sibling wants a GValue array Ruby cannot build (FINDINGS.md #4)
+# — so the button is instantiated from a two-line GtkBuilder document that
+# carries the `<accessibility>` block, and everything else is set on the
+# instance afterwards. lib/find_overlay.rb reaches a construct-only `css-name`
+# the same way.
 #
 # The CSS below is troll's ThemeSelector.css with one mechanical change: troll
 # registers the widget under the CSS node name `themeselector` (GObject
@@ -56,6 +60,24 @@ class ThemeSelector
   ].freeze
 
   SPACING = 12
+
+  BUTTON_ID = 'theme_button'
+
+  # GtkBuilder's own `<accessibility>` parsing is the only way to an accessible
+  # label from Ruby. The label is interpolated rather than marked
+  # `translatable="yes"`: the string has already been through gettext by the
+  # time it gets here, and a builder string has no translation domain of its
+  # own.
+  BUTTON_UI = <<~XML
+    <?xml version="1.0" encoding="UTF-8"?>
+    <interface>
+      <object class="GtkCheckButton" id="#{BUTTON_ID}">
+        <accessibility>
+          <property name="label">%<label>s</property>
+        </accessibility>
+      </object>
+    </interface>
+  XML
 
   DARK_CLASS = 'dark'
   ROOT_CLASS = 'themeselector'
@@ -188,7 +210,7 @@ class ThemeSelector
     end
 
     def button(style, label, target)
-      Gtk::CheckButton.new.tap do |check|
+      labelled_button(label).tap do |check|
         check.add_css_class('theme-selector')
         check.add_css_class(style)
         check.hexpand = true
@@ -200,5 +222,22 @@ class ThemeSelector
         # would be wrapped as an int64 that never matches the action's type.
         check.action_target = GLib::Variant.new(target, 'i')
       end
+    end
+
+    # A check button whose accessible label is already set, which is the one
+    # property that cannot be assigned after construction.
+    def labelled_button(label)
+      Gtk::Builder.new(string: format(BUTTON_UI, label: escape(label)))[BUTTON_ID]
+    end
+
+    # The label goes into an XML document, so the five predefined entities have
+    # to go in as entities. A translated label is arbitrary text.
+    def escape(text)
+      text.to_s
+          .gsub('&', '&amp;')
+          .gsub('<', '&lt;')
+          .gsub('>', '&gt;')
+          .gsub('"', '&quot;')
+          .gsub("'", '&apos;')
     end
 end

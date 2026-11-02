@@ -225,12 +225,36 @@ class Sidebar
       end
     end
 
+    # Upstream reads doc-index.json straight out of pkgdatadir, where its build
+    # step has already written it; nothing generates it at run time, so there is
+    # nothing for it to invalidate. This port builds the index on first run
+    # instead and caches it under XDG_CACHE_HOME, which introduces a staleness
+    # upstream does not have: a machine with no API documentation installed yet
+    # would cache an empty index and go on showing an empty tree long after the
+    # documentation arrived. An index with no namespaces in it is therefore
+    # neither read back from the cache nor written to it.
     def read_or_build_index
-      DocIndex.read(index_path).then do |cached|
+      usable(DocIndex.read(index_path)).then do |cached|
         if cached
           cached
         else
-          DocIndex.new.tap { |index| index.write(File.dirname(index_path)) }.to_h
+          build_index
+        end
+      end
+    end
+
+    def usable(index)
+      if index&.fetch('docs', [])&.any?
+        index
+      end
+    end
+
+    def build_index
+      DocIndex.new.then do |index|
+        index.to_h.tap do
+          if index.docs.any?
+            index.write(File.dirname(index_path))
+          end
         end
       end
     end
