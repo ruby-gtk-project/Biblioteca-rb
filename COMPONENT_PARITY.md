@@ -240,13 +240,21 @@ describes upstream's bug, how to see it, and what the port does instead.
 
 ---
 
-## Still owed after round 2
+## Still owed after round 3
 
-1. Row 11a: the theme selector's accessible labels.
-2. The upstream bug report for `FINDINGS.md` #5 (and, lower priority, #6).
-3. A run. Nothing in this ledger has been seen working, because the GTK gems
-   are not installed in this checkout. Every row above is a reading of the
-   upstream source and of the bindings, not an observation.
+Rows 11a and 3 of the round-2 list are paid: the theme selector's three check
+buttons carry an `<accessibility>` label (`lib/theme_selector.rb`, closed at
+`189b4e6`), and the port has been run (closed at `189b4e6` and `60ee85c`).
+What is still owed:
+
+1. The upstream bug report for `FINDINGS.md` #5 (and, lower priority, #6).
+2. `rake data:install` and `rake data:validate` have not been run, so no
+   `desktop-file-validate` or `appstreamcli` output has been seen and the
+   install layout is unobserved.
+3. Nothing drives a pointer or a keyboard. The gesture and middle-click paths
+   are reached only through the actions they end in, so the gestures
+   themselves — `Gtk::GestureClick` on the two sidebar rows — are still
+   unobserved.
 
 ---
 
@@ -264,7 +272,10 @@ that were recorded in the comment describing the gap now live in `FINDINGS.md`
 with reproductions. The report's rows stay as they are; they are the record of
 what was true at `7211c78`.
 
-Three admissions are still owed, in first person, because they are still true:
+One admission is still owed, in first person, because it is still true. The
+other two were answered after round 2 by work rather than by rewording; they
+are kept here as the record of what was true at `7211c78`, each followed by
+what closed it.
 
 > I have not run any of this. The GTK gems are not installed in this checkout,
 > so I closed sixteen gaps by reading the upstream source, the bindings' own
@@ -276,12 +287,30 @@ Three admissions are still owed, in first person, because they are still true:
 > upstream msgids), 20 of 20 `doc_index_spec.rb` expectations replayed outside
 > RSpec.
 
+Closed at `189b4e6` and `60ee85c`. `nix/Gemfile` carries the four runtime gems,
+and the application has been run under `xvfb-run`:
+`test/drive_biblioteca.rb` walks the whole app for 394 of 394 checks and 18
+screenshots and prints `DRIVE OK`, `test/drive_app.rb` runs 31 steps with 2
+skipped and `test/drive_sidebar.rb` 24 steps, all three on this checkout. The
+bet on `data/ui/shortcuts.ui` came in: `Gtk::Builder` does still instantiate
+the deprecated `GtkShortcutsWindow`, and `app.shortcuts` opens it in
+`test/drive_app.rb`.
+
 > I did not give the theme selector's three buttons an accessible label, so a
 > screen reader reads a tooltip where upstream gives it a label of its own.
 > Upstream: `troll/src/widgets/ThemeSelector.blp`, `accessibility { label: … }`
 > on each of the three check buttons.
 > Port: `lib/theme_selector.rb#button`, tooltip only. Cause and reproduction:
 > `FINDINGS.md` #4.
+
+Closed at `189b4e6`. `lib/theme_selector.rb` builds the three check buttons
+through `Gtk::Builder` so each one carries upstream's
+`accessibility { label: ... }`, because `gtk_accessible_update_property` is
+variadic and unbound; the tooltip stays alongside it, as upstream's does.
+`test/drive_app.rb` reaches all three buttons and finds three of them, so the
+builder string parses and the buttons are real — but GTK4 exposes no getter for
+`GTK_ACCESSIBLE_PROPERTY_LABEL`, so the label itself can only be read by an
+assistive technology over AT-SPI, and this port has not read it back.
 
 > I found two bugs in upstream and have reported neither. The first moves the
 > foreground tab's progress bar from a background tab's load and I diverged
