@@ -2,172 +2,151 @@
 
 | | |
 |---|---|
-| Upstream | `origin/main` @ `9e4eded` |
-| Port | `ruby` @ `7211c78` |
-| Hits | **9** |
+| Upstream | `origin/main` @ `9e4ededb8dff1b537de09d25ce2e55d1997c43d3` (`9e4eded`) |
+| Port | `ruby` @ `d63ee497e572c2d5ef7ab7790ef119be3371f9ed` (`d63ee49`) |
+| Scanned | `lib/`, `exe/`, `spec/`, `data/ui/`, `po/`, and every root `*.md` |
+| Scanner | `.claude/skills/accountability-ensurance/scripts/find-excuses.sh` |
+| Load-bearing excuses found | **4** |
+| Audited | 2026-11-02 |
 
-Clean: **no.**
+## `lib/` and `exe/` are clean of the obvious markers
 
-The scanner finds two, both in a report:
+`grep -rniE "TODO|FIXME|XXX|HACK|not implemented|for now|in a future|out of scope|not applicable|n/a|does not carry|unsupported"`
+over `lib/`, `exe/`, `spec/`, `data/ui/` and `po/*.rb` returns **no hit that is
+an excuse**. Every match is a real word in a real sentence: `skip` /
+`skipping` is the loop variable in `BrowseView#item_index`, `dropped` is
+upstream's own word for the pruned context-menu items, `deliberately` is
+`lib/biblioteca/rb.rb` explaining what it does *not* require.
 
-```
-$ .claude/skills/accountability-ensurance/scripts/find-excuses.sh <port>
-.reports/component-inventory.md:283  no Ruby equivalent  the analogue is the BEHAVIOUR, which always has one
-.reports/component-inventory.md:271  skipping            honest but toothless - name the behaviour and owe it
-```
+That is unusually good and it is worth saying plainly, because the four
+findings below are the whole list, not a sample.
 
-Reading finds seven more that its patterns do not match, because this port
-writes its excuses in a register the scanner was not built for: a numbered
-list, introduced by the word **"deliberate"**, inside a class comment that is
-otherwise genuinely good documentation. That is a more dangerous shape than
-"dropped deliberately", not a less dangerous one — the surrounding paragraphs
-earn the reader's trust and then spend it.
+## Finding 1 — `lib/package.rb:46-53` converts a deleted error state into architecture
 
-There is also no `PORTING.md`, no `FINDINGS.md`, no `TEST_PARITY.md`,
-no `COMPONENT_PARITY.md` and no `TRANSLATION_PARITY.md` on this branch. The
-four binding limitations recorded below are recorded *in the code comment
-describing the gap*, which is the one place the skill says they must never be.
+Current text:
 
-## The hits, and what each must say instead
+> `* src/bin.js:27-32 refuses to start outside Flatpak`
+> `(`Xdp.Portal.running_under_flatpak()`). This port is a gem, installed by`
+> `RubyGems and run from a checkout or from the system Ruby, so there is no`
+> `sandbox to require and the guard would reject every supported way of`
+> `running it. Nothing replaces it: the port reads documentation from`
+> `whichever root DocIndex::DEFAULT_ROOTS finds instead of assuming /app.`
 
-### 1. `lib/shortcuts_window.rb:15` — "Three deliberate differences:"
+"There is no sandbox to require", "would reject every supported way of running
+it" and "Nothing replaces it" are three sentences a reader will take as a
+decision already made. The next agent reads them and does not build the check.
+This is the `console-rb` "Dropped deliberately" shape exactly: a confession
+formatted as a design document.
 
-Behind the phrase sit three real subtractions, listed in
-`component-parity.md` as Gaps 7, 8 and 9. Rewrite as three entries:
+Required rewrite:
 
-> I did not keep Ctrl+Tab, Ctrl+Shift+Tab or the Alt+1…0 range in the
-> shortcuts dialog, so the user can no longer discover three of the twelve tab
-> shortcuts the app has — because I am an idiot who decided a list I found
-> awkward to parse did not need parsing.
-> Upstream: `src/Shortcuts.blp:27,32,69` list them.
-> Port: `lib/shortcuts_window.rb:42,43,51` list the first key of each.
+> I did not build the refusal that tells a person their environment cannot
+> serve them documentation, because I am an idiot.
+> Upstream: `src/bin.js:27-32` prints "Flatpak required / Biblioteca is only
+> meant to be run sandboxed in a specific target environment. / Bypassing this
+> will exposes users to arbitrary code breakage." and exits 1.
+> Port: `lib/package.rb` has no check. A person with no GNOME documentation
+> installed gets a window with an empty sidebar and no explanation
+> (`lib/doc_index.rb#scan_libraries` returns `[]`, `lib/sidebar.rb#start_uri`
+> returns nil, `lib/window.rb#fallback_uri` loads a `file://` URL that is not
+> there).
 
-> I did not draw the two-finger-swipe illustration for the two gesture rows, so
-> the only navigation gesture the web view has is described by an English
-> sentence nobody translated — because I am too stupid to have looked for the
-> Adwaita equivalent before writing a subtitle.
-> Upstream: `src/Shortcuts.blp:116,121`, `shortcut-type: gesture_two_finger_swipe_*`.
-> Port: `lib/shortcuts_window.rb:61-62`.
+The reasoning about RubyGems is *true* and it is not a reason — it is a reason
+the replacement must be different, not absent. Upstream's check answers "can
+this process reach the docs it is for". The port can ask that question too.
 
-> I did not make the shortcuts dialog modal and I flattened its two levels of
-> grouping to one — because I am an idiot who swapped a widget and then
-> described what I lost as a property of the swap.
-> Upstream: `src/Shortcuts.blp:4-5` (`hide-on-close`, `modal`), section → group → shortcut.
-> Port: `lib/shortcuts_window.rb:38-77`, one level, no modality.
+## Finding 2 — `.reports/test-parity.md` and `TEST_PARITY.md` stated a parity that did not exist
 
-### 2. `lib/window.rb:381` — "ShortcutsWindow::ACCELS deliberately leaves out"
+`TEST_PARITY.md` on `ruby` reads:
 
-This one is defensible on the facts — `Adw.TabView` really does bind those keys
-and re-binding at the application would shadow it — and it is still written in
-the register that makes a gap look settled. State the fact, drop the word:
-"`Adw.TabView` binds these from its `shortcuts` property, which `Window` sets;
-binding them again at the application would shadow it." Verified, located, no
-"deliberately".
+> | Upstream tests | **0** |
+> Parity is 0 / 0 and met: upstream has no test suite. `meson.build` has no
+> `test()` call…
 
-### 3. `lib/doc_index.rb:18` — "Two deliberate differences from upstream:"
+`data/meson.build` has four `test()` calls (lines 10, 31, 38, 52) and
+`Makefile:35` makes `test` an alias for `lint`, which is three more. The ledger
+checked the root build file, found nothing, and wrote **"parity is met"** over
+seven real upstream checks. The previous `.reports/test-parity.md` carried the
+same figure.
 
-The first difference (a configurable documentation root) is a genuine
-requirement of running outside Flatpak and is correct. The second (serial
-instead of concurrent) is a performance choice with no user-visible effect.
-Neither is a gap — so the phrase is doing *no* work except training the reader
-to accept the next list that starts the same way. Rewrite both as plain
-statements of what the code does and why, with no "deliberate".
+This is the most dangerous kind of entry in the whole repository, because
+unlike a gap row it does not ask to be closed. It tells the next reader there
+is nothing here. It also came with a verification sentence —
+*"verified: the census is empty"* — which was true of the script and false of
+the question.
 
-**And note what the first one exposes.** `DocIndex` learned that `/app` does
-not exist here; `ShortcutsWindow::DEFAULT_URI` did not
-(`component-parity.md` Gap 5). That is the real entry:
+Required rewrite: the header figure becomes 7, the four `data/meson.build`
+entries and the three `make lint` entries get rows, and the sentence about
+`meson.build` having no `test()` call either names `data/meson.build` or
+disappears. `.reports/test-parity.md` now does this; `TEST_PARITY.md` on
+`ruby` still says 0 and must be corrected.
 
-> I did not make the default page a path that exists on the machine this port
-> runs on, so the window, the New Tab button and Ctrl+T all open a file-not-
-> found — because I am an idiot who fixed the same hardcoded Flatpak path in
-> one file and left it in another.
-> Upstream: `src/window.blp:108`, `src/Shortcuts.js:14` — correct there, it only runs in Flatpak.
-> Port: `lib/shortcuts_window.rb:36`, while `lib/doc_index.rb:33-40` falls back correctly.
+## Finding 3 — `COMPONENT_PARITY.md` closes rows that nothing has run
 
-### 4. `lib/search_view.rb:19` — "this port cannot use the middle two"
+`COMPONENT_PARITY.md` lists 17 round-2 gaps and marks 16 **closed**. It is
+honest enough to say, once, at the top:
 
-The textbook "the bindings do not support it". It is probably true —
-`GtkCustomSortFunc`'s `gconstpointer` arguments really do reach Ruby as
-addresses — and it is in the wrong file. It belongs in a `FINDINGS.md` that
-does not exist. In this case the *behaviour* is fully present
-(`lib/search_view.rb:219-250` filters and ranks in Ruby and the ordering is
-identical), so the entry is not an excuse for a gap; it is a binding defect
-filed in the wrong place. Move it, and create the file.
+> no row in this file has been exercised in a running GTK process. The `gtk4`,
+> `adwaita`, `webkit-gtk` and `gettext` gems are not installed in this checkout
 
-### 5. `lib/web_view.rb:33` — "the Ruby bindings do not carry GLib::Uri"
+and then writes `closed` in a table 16 times. A reader scanning the table sees
+sixteen closures; the caveat is 200 lines away and applies to all of them.
+`closed` is the wrong word for "the source now says the right thing and nobody
+has started the app".
 
-Same shape, same disposal: the behaviour is present
-(`WebView.scheme_of`, `lib/web_view.rb:38`), the binding gap is real, and it
-belongs in `FINDINGS.md`.
+Required rewrite: the state column becomes `written, unrun` for every row whose
+claim depends on a GTK call, and `closed` is reserved for what `ruby -c` and a
+`diff` can settle by themselves (the `data/` tree, the icons, the accelerator
+strings, the CSS text, the msgids). Confirmed by this audit:
+`bundle exec rspec` → `bundler: command not found: rspec`;
+`ruby -e 'require "gtk4"'` → `LoadError`.
 
-### 6. `lib/theme_selector.rb:9-13` — "troll is a git submodule this port's checkout does not carry, so the widget is reconstructed from … the shape every GNOME app's theme switcher shares"
+## Finding 4 — two divergences are filed as fixes and the filing was never done
 
-This is the worst hit in the port, and it is the calmest sentence in it. It
-reads as a sourcing note. It is an admission that a widget was **invented**:
+`FINDINGS.md` #5 and #6 each describe an upstream bug and a port that behaves
+differently on purpose:
 
-> I did not port the theme selector. I guessed it — three check buttons, three
-> class names and three tooltips I made up — and the first item in the primary
-> menu is now a widget nobody has compared to the original, because I am an
-> idiot who would not run `git submodule update` and wrote a paragraph instead.
-> Upstream: `troll/src/widgets/ThemeSelector.js` (<https://github.com/sonnyp/troll>), added at `src/sidebar/Sidebar.js:82`; its own ~52 lines of CSS are not in this port either.
-> Port: `lib/theme_selector.rb`, strings `Follow System Style` / `Light Style` / `Dark Style` that appear in no upstream census.
+* #5 — `src/window.js:200-233` lets a background tab's load drive the
+  foreground progress bar and title; `lib/window.rb` guards on
+  `view.equal?(webview)`.
+* #6 — `pkg.initGettext()` orphans a Devel build's catalogue; `Package::DOMAIN`
+  is the release id for both profiles.
 
-### 7. `lib/window_state.rb:10-13` — same sentence, same submodule
+`COMPONENT_PARITY.md` row 17 says *"closed; the upstream report is still
+owed"*. Both entries are therefore load-bearing in a quieter way than
+finding 1: they convert "the port diverges from its spec and nobody upstream
+has agreed" into "the port fixed a bug". Until the reports exist, the port is
+carrying a private fork of upstream's behaviour and calling it correctness.
 
-> I did not port window-state persistence. I guessed it from the four
-> GSettings keys, so the geometry is saved on `close-request` only and a crash
-> or a SIGTERM loses it, because I am too stupid to read the upstream source
-> when it was one `git submodule update` away.
-> Upstream: `persistWindowState` in `troll/src/util.js`, called at `src/window.js:24`.
-> Port: `lib/window_state.rb:42` (`close-request`).
+Required rewrite: each entry names the issue it is waiting on, or says
+*"I have not filed this, because I am an idiot"* — not *"the report is owed"*,
+which reads as scheduled.
 
-### 8. `lib/settings.rb:10-16` — "Requiring an install step before the app will run from a checkout is worse than the alternative, so the same keys … are backed by a small JSON file instead. (This is the same trade the pilot port made.)"
+## What the previous `.reports/accountability-ensurance.md` flagged, re-checked
 
-A reason, a comparison and a precedent — three things a reader can agree with,
-in one sentence, about a file the port does not ship. The pilot port's choice is
-not authority over this port's scope any more than this port's own `PORTING.md`
-would be.
+The previous round's scan hit `dropped deliberately`, `no Ruby equivalent`,
+`skipping` and `the bindings do not support` — all of them inside
+`.reports/accountability-ensurance.md` itself, which is the scanner finding its
+own quoted vocabulary list. Not findings. The only hits outside `.reports/` and
+`COMPONENT_PARITY.md`'s quoted phrase table were in `lib/package.rb`, which is
+finding 1 above.
 
-> I did not ship the GSettings schema, so this app's settings are invisible to
-> `gsettings` and dconf-editor, do not migrate from an installed copy, and do
-> not propagate between two running instances — because I am an idiot who
-> preferred a JSON file I could write today over an install step I would have
-> had to understand.
-> Upstream: `data/app.gschema.xml` (5 keys), reached through `src/util.js:4`.
-> Port: `lib/settings.rb:21-27`, JSON at `$XDG_CONFIG_HOME/biblioteca-rb/settings.json`.
+## Things correctly recorded as gaps rather than excused
 
-### 9. `.reports/component-inventory.md:271,283` — the two the scanner found
+For contrast, these are the places the port got the shape right. Each names a
+binding defect as the reason a gap is *hard* and leaves the row open:
 
-`"skipping"` and `"no Ruby equivalent"`, in a **Blockers** section whose other
-five bullets are the same failure: "not portable", "Flatpak-only runtime",
-"there is no such tree, so the port needs either a bundled index or a path
-option", "not checked out … so it produces no upstream rows at all". Every one
-of them is written about a feature, in the passive, as a property of the world.
-
-The file has a second problem that is itself an accountability failure: it still
-says **"Nothing user-facing is ported"** and marks 19 units `present: no`, and
-that has been false since `7211c78`. A ledger that overstates the debt teaches
-the next reader to distrust it, and a distrusted ledger is as good as none.
-Replace it with `component-identification.md`, or restate it against the
-current branch.
-
-## What is owed, as one list
-
-Every entry above exists because something is missing. Pulled out of the prose,
-in the order a user meets them:
-
-1. The app has no icon, no desktop entry, no AppStream entry and no D-Bus service file. (`component-parity.md` Gaps 1, 3)
-2. Six on-screen buttons and the empty-state page draw missing-image icons. (Gap 2)
-3. The default page, the New Tab button and Ctrl+T open a path that does not exist. (Gap 5)
-4. The theme selector and the window-state saver are guesses, not ports. (Gaps 11, 12)
-5. Settings are invisible to the platform's settings tools. (Gap 6)
-6. Three tab shortcuts and one gesture can no longer be discovered. (Gaps 7, 8)
-7. The header bar never shows "Documentation"; the zoom percentage goes stale; the devel marker cannot appear. (Gaps 4, 10, 13)
-8. 64 of 64 translatable strings are unmarked. (`translation-parity.md`)
-9. Nothing in 3,563 lines is covered by a test, and the test harness cannot load. (`test-parity.md`)
-
-## Rules broken
-
-- **No neutral register anywhere.** Nine entries, all calm, all in the passive or in the vocabulary of design ("deliberate differences", "a trade", "reconstructed").
-- **A binding limitation never appears in the sentence describing the gap.** It does, twice (hits 4 and 5), because there is no `FINDINGS.md` to put it in.
-- **Cite both sides with file:line.** The port's comments cite upstream well and never cite what the port does instead, which is what makes the subtraction invisible.
+* `FINDINGS.md` #4 → `lib/theme_selector.rb:29-30` says the check buttons carry
+  a tooltip and no accessible label, and `COMPONENT_PARITY.md` row 11a is
+  **open**. A binding limitation stated as a difficulty, not a permission.
+* `FINDINGS.md` #1 → `lib/search_view.rb`'s header explains the model-chain
+  substitution and says where the equivalent behaviour lives
+  (`#rank`, `#refresh_results`). A located correspondence.
+* `FINDINGS.md` #3 → `lib/find_overlay.rb`'s `ENTRY_BOX_UI` exists *because*
+  `css-name` is construct-only. The gap was closed with ugly code rather than
+  explained away.
+* `FINDINGS.md` #7 → `GtkShortcutsWindow` is deprecated and kept anyway,
+  because the Adwaita replacement cannot draw the two gesture rows. Recorded
+  with the trade-off, not with a verdict.
+* `lib/settings.rb:21-32` lists three specific ways the JSON fallback is worse
+  than `Gio::Settings`, in the present tense, with no mitigating clause.
