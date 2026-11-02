@@ -2,29 +2,30 @@
 
 | | |
 |---|---|
-| Upstream | `origin/main` @ `9e4ededb8dff1b537de09d25ce2e55d1997c43d3` (`9e4eded`) |
-| Port | `ruby` @ `d63ee497e572c2d5ef7ab7790ef119be3371f9ed` (`d63ee49`) |
+| Upstream | `origin/main` @ `9e4eded` |
+| Port | `ruby` @ `243ddbe` |
 | Inventory | `.reports/component-identification.md` |
+| Runtime gate | `drive_ok=true`, **394 of 394 checks**, 19 components, re-run this round |
 | Gaps | **7 open** |
-| Divergences owed upstream | 1 |
-| Units unverifiable from the pinned ref | 2 |
+| Divergences recorded, not gaps | 5 |
+| Units unverifiable against upstream | 2 |
 | Audited | 2026-11-02 |
 
-The UI side of this port is in good shape. Every upstream window, dialog,
-page, menu item, keyboard shortcut, preference, action, empty state and error
-state was enumerated and located except the seven rows below. The four axes —
-count, style, behaviour, text — hold per mapped file for every unit in
-`.reports/component-identification.md`, and the text axis holds **byte for
-byte**: all 64 upstream msgids are produced by the port
-(`.reports/translation-parity.md`).
+**What changed since the last round.** The previous edition of this file said
+"Nothing below has been exercised in a running GTK process", and that was true
+when it was written. It is no longer: `test/drive_biblioteca.rb` was re-run
+this round under `nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24'`
+and reported `394 of 394 checks passed / DRIVE OK`, the two older drivers still
+pass (`test/drive_app.rb` 31 steps / 2 skipped, `test/drive_sidebar.rb` 24
+steps / 0 failures), and `spec/` reports 36 examples / 0 failures. Every
+"present and correct" below is now a claim about a running process except
+where a row says otherwise — and three rows say otherwise.
 
-**Nothing below has been exercised in a running GTK process.** The `gtk4`,
-`adwaita`, `webkit-gtk` and `gettext` gems are not installed in this checkout
-(`ruby -e 'require "gtk4"'` → `LoadError`; `bundle exec rspec` →
-`command not found: rspec`). Every "present and correct" in this report is a
-claim about source text, not about pixels. A four-axis parity report on an app
-nobody has started is a weaker document than it looks, and that is itself the
-largest finding here.
+The UI side of the port holds on all four axes. Every upstream window, dialog,
+page, menu item, keyboard shortcut, preference, action, empty state and error
+state was enumerated and located except the gaps below. The text axis holds
+byte for byte: all 64 upstream msgids are produced
+(`.reports/translation-parity.md`).
 
 ---
 
@@ -32,66 +33,80 @@ largest finding here.
 
 | # | Component | Upstream | Port | Behaviour still owed |
 |---|---|---|---|---|
-| 1 | Flatpak-required startup refusal | `src/bin.js:27-32` — outside Flatpak, `console.error("Flatpak required\nBiblioteca is only meant to be run sandboxed in a specific target environment.\nBypassing this will exposes users to arbitrary code breakage.")` then `exit(1)` | **absent.** `lib/package.rb:46-53` records the omission and says "Nothing replaces it" | A person who starts the app in an environment it cannot read documentation from is told so and the app stops, instead of opening an empty sidebar |
-| 2 | `Gtk.UriLauncher` | `src/init.js:8` promisifies `Gtk.UriLauncher.prototype.launch` | **absent** — `grep -rn UriLauncher lib/` is empty | Nothing demonstrable: no call site for it exists anywhere on `origin/main` either, so this is dead code upstream. Recorded rather than excused: the port has no promisified launcher if a call site appears |
-| 3 | Flatpak packaging | `build-aux/app.drey.Biblioteca.json`, `build-aux/app.drey.Biblioteca.Devel.json`, `build-aux/modules/{gom,jsonrpc-glib,libshumate,libspelling,sdk-docs,vte}.json` | **absent.** No `build-aux/`, no `flatpak/`, no manifest of any kind | The app can be installed the way upstream ships it. Upstream's *only* supported distribution is a Flatpak that bundles `org.gnome.Sdk.Docs` — which is where `/app/share/doc` comes from. Without it the port depends on documentation the user installed by hand |
-| 4 | Theme-selector accessible labels | troll's `ThemeSelector.blp` sets an accessible label on each of the three check buttons | `lib/theme_selector.rb:197` sets `tooltip_text` only — a screen reader announces the tooltip, not a label | A screen-reader user hears "Follow system style" as a labelled control. Blocked by `FINDINGS.md` #4 (`gtk_accessible_update_property` has no usable Ruby form); the row stays a gap |
-| 5 | `troll/src/widgets/ThemeSelector.{js,blp,css}` | a git submodule — a gitlink on `origin/main`, not a tree | `lib/theme_selector.rb` (204 lines) | Parity for the theme switcher — the one preference surface in the app. **It cannot be checked against the pinned ref at all.** Pin and vendor the `troll` sha, then compare |
-| 6 | `troll/src/util.js` `persistWindowState` | same submodule | `lib/window_state.rb` (95 lines) | Parity for window-geometry persistence. Same cause, same remedy |
-| 7 | GSettings schema reachable without an install step | upstream installs the compiled schema from `data/meson.build:52` and `src/util.js:4` opens it unconditionally | `lib/settings.rb` falls back to a per-process JSON file under `XDG_CONFIG_HOME` when no compiled schema is found, and documents the fallback as strictly worse: not cross-process, invisible to `gsettings`, and it never migrates | A colour-scheme change made in one running copy reaches the other, and `gsettings get org.rubygtkproject.Biblioteca color-scheme` shows what the app is using. Today a checkout that has not run `rake schema:compile` has neither |
+| 1 | **Flatpak-required startup refusal** — the app's one error state | `src/bin.js:27-32`: outside Flatpak, `console.error("Flatpak required\nBiblioteca is only meant to be run sandboxed in a specific target environment.\nBypassing this will exposes users to arbitrary code breakage.")` then `exit(1)` | **absent.** `lib/package.rb:46-53` records the omission and says "Nothing replaces it" | A person who starts the app somewhere it cannot read documentation from is told so and the app stops, instead of opening on an empty sidebar. The port *has* the information to say it — `DocIndex.default_root` is `nil` and `DocIndex#docs` is `[]` — and says nothing |
+| 2 | **Flatpak packaging** | `build-aux/app.drey.Biblioteca.json`, `…Devel.json`, `build-aux/modules/{gom,jsonrpc-glib,libshumate,libspelling,sdk-docs,vte}.json` | **absent.** No `build-aux/`, no manifest of any kind | The app installs the one way upstream ships it. Upstream's Flatpak bundles `org.gnome.Sdk.Docs`, which *is* `/app/share/doc`; without it the port depends on documentation the user installed by hand. This gap also causes test-parity gaps 3, 6 and 7 |
+| 3 | **`troll` submodule cannot be diffed** — `ThemeSelector` | a gitlink on `origin/main`; `troll/src/widgets/ThemeSelector.{js,blp,css}` | `lib/theme_selector.rb` (243 lines) | Parity for the theme switcher — the app's only preference surface — *checked against its source*. Today the port's own comments are the only description of what troll does, which is not a check. Fix: pin and vendor the troll sha under `vendor/troll/` |
+| 4 | **`troll` submodule cannot be diffed** — `persistWindowState` | same submodule, `troll/src/util.js` | `lib/window_state.rb` (95 lines) | Same cause, same fix. The 300 ms debounce, the two `Gio.SettingsBindFlags.DEFAULT` binds and the `if (width && height)` guard are asserted by the drive run against the port's *description* of troll, not against troll |
+| 5 | **Theme-swatch accessible labels are unverifiable** | troll's `ThemeSelector.blp` sets `accessibility { label: … }` on each of the three check buttons | `lib/theme_selector.rb#labelled_button` sets it through a `Gtk::Builder` `<accessibility>` block — the only route Ruby has | **Proven this round:** there is no Ruby getter (`Gtk::CheckButton` exposes `accessible_id`, `accessible_parent`, `accessible_role` and nothing else), **and `Gtk::Builder` accepts `<property name="no-such-prop">` inside `<accessibility>` without raising or warning.** So the one accessibility claim in the port is set by a mechanism that fails silently and that no check can read back. `grep -n accessible test/*.rb` is empty. Fix: assert the property name in `BUTTON_UI` against GTK's accessible-property list in the drive script, and verify the label once out of band over AT-SPI |
+| 6 | **`Sidebar#start_index` clamps away upstream's "no selection"** | `src/sidebar/Sidebar.js:30` and `:62` set `selection_model.selected = doc_index.start_index` directly. With documentation installed but no `Gtk-4.0`, `start_index` is `-1`, which GTK reads as `GTK_INVALID_LIST_POSITION` — **nothing is selected and nothing is loaded** | `lib/sidebar.rb#start_index` turns a negative index into `0`, so the first namespace alphabetically is selected *and its page is loaded into the tab* | Either upstream's behaviour, or a recorded divergence with a reason. It is neither: the clamp is undocumented in `FINDINGS.md`, in `PORTING.md` and in every report, and no check exercises it — `test/drive_biblioteca.rb:404` covers `start_index == -1` only with an **empty** `docs` array, where the clamp cannot be observed |
+| 7 | **GSettings reachable without an install step** | `data/meson.build:46` installs the compiled schema; `src/util.js:4` opens it unconditionally | `lib/settings.rb` falls back to a per-process JSON file under `XDG_CONFIG_HOME` when no compiled schema is found, and documents the fallback as strictly worse: not cross-process, invisible to `gsettings`, never migrated | A colour-scheme change in one running copy reaches the other, and `gsettings get org.rubygtkproject.Biblioteca color-scheme` shows what the app is using. A checkout that has not run `rake schema:compile` has neither. The drive run exercises **both** backends, so the fallback is tested — it is still a behaviour gap, not a test gap |
 
 ## Divergences recorded, not gaps
 
 | Component | Upstream | Port | Status |
 |---|---|---|---|
-| per-tab web-view handlers | `src/window.js:200-233` writes `this._webview` — the *selected* view — from the title, uri and progress handlers without checking which view emitted, so a background tab finishing a load moves the foreground tab's progress bar and briefly its title | `lib/window.rb` guards every one of those on `view.equal?(webview)` | `FINDINGS.md` #5 calls this an upstream bug. The divergence is deliberate and documented. **The upstream bug report is still owed** — until it is filed, the port is carrying a private fork of upstream's behaviour |
-| gettext domain for a Devel build | `pkg.initGettext()` binds `pkg.name`, so `app.drey.Biblioteca.Devel` looks for a `.Devel` catalogue that is never built | `Package::DOMAIN` is the release id for both profiles | `FINDINGS.md` #6. Same status: a bug fix, and the upstream report is owed |
-| default new-tab URI | `file:///app/share/doc/gtk4/index.html`, hardcoded in `src/window.blp:108` and `src/Shortcuts.js:11` | `Window#default_uri` → `Sidebar#start_uri` → the Gtk-4.0 node of the built index, falling back to `DocIndex::DEFAULT_ROOTS.first` | Forced by gap 3: with no Flatpak there is no `/app` |
-| `doc-index.json` build step | `build-aux/build-index.js` runs under gjs at install time and writes into `pkgdatadir` (`src/meson.build:11`) | `lib/doc_index.rb` builds the same structure at first run into `XDG_CACHE_HOME/biblioteca-rb/` | Read side by side: `SECTION_TYPES`, `SUBSECTION_TYPES`, `REQUIRED`, `IGNORED_LIBRARIES`, `getLinkForDocument`, `getTagForDocument`, `getSearchNameForDocument` and the recursive sort are reproduced entry for entry |
-| `Gtk.ShortcutsWindow` | used directly | kept, via `data/ui/shortcuts.ui` | `FINDINGS.md` #7: deprecated in GTK 4.18 and still the only widget with gesture rows and two-level grouping. Recorded substitution-that-wasn't |
+| per-tab web-view handlers | `src/window.js:200-233` writes `this._webview` — the *selected* view — from the title, uri and progress handlers without checking which view emitted, so a background tab finishing a load moves the foreground tab's progress bar and briefly its title | `lib/window.rb` guards all five on `view.equal?(webview)` | `FINDINGS.md` #5. Deliberate; the drive run pins it with a deliberate background-tab check. **The upstream bug report is still owed** |
+| gettext domain for a Devel build | `pkg.initGettext()` binds `pkg.name`, so `app.drey.Biblioteca.Devel` looks for a `.Devel` catalogue nothing builds | `Package::DOMAIN` is the release id for both profiles | `FINDINGS.md` #6. Same status; report owed |
+| default new-tab URI | `file:///app/share/doc/gtk4/index.html`, hardcoded at `src/window.blp:108` and `src/Shortcuts.js:11` | `Window#default_uri` → `Sidebar#start_uri` → the `Gtk-4.0` node of the built index, falling back to `DocIndex::DEFAULT_ROOTS.first` | Forced by gap 2: with no Flatpak there is no `/app` |
+| `doc-index.json` build step | `build-aux/build-index.js` runs under gjs at install time into `pkgdatadir` (`src/meson.build:11`) | `lib/doc_index.rb` builds the same structure on first run into `XDG_CACHE_HOME/biblioteca-rb/` | Diffed entry for entry this round: `SECTION_TYPES` (12), `SUBSECTION_TYPES` (7), `REQUIRED` (4), `IGNORED_LIBRARIES` (8), `getLinkForDocument` (19 cases), `getTagForDocument` (7 relabels + default), `getSearchNameForDocument` (4 groups) and the recursive name sort all match |
+| `Gtk.ShortcutsWindow` | used directly | kept, via `data/ui/shortcuts.ui` | `FINDINGS.md` #7: deprecated in GTK 4.18 and still the only widget with gesture rows and two-level grouping |
 
 ## Correspondences, each located
 
-These are the same thing spelled differently. Every one names a file.
+The scan flags these as missing; each is the same thing spelled differently.
 
 | Axis row the scan flags | Where it actually is |
 |---|---|
-| `Gtk.BuilderListItemFactory` → nothing | `Gtk::SignalListItemFactory` with `setup`/`bind` — `lib/browse_view.rb:144`, `lib/search_view.rb:171` |
-| `notify::is-online` → nothing | `on_online_changed:` callback — `lib/web_view.rb:150`, fired from `#update_is_online`; consumed at `lib/window.rb#on_webview_online` |
-| `notify::webview` → nothing | `BrowseView#webview=` calls `@on_webview_changed` — `lib/browse_view.rb:72`; consumed at `lib/sidebar.rb#on_webview_changed` |
-| `notify::search-term` → nothing | `SearchView#search_term=` — `lib/search_view.rb:124` |
-| `search-view-selection-changed` → nothing | `on_selected:` callback — `lib/search_view.rb:98`, consumed at `lib/sidebar.rb#on_search_selection` |
-| `Gtk.ListScrollFlags.NONE` → nothing | the symbol `:none` — `lib/browse_view.rb:187`, `lib/search_view.rb:131` |
-| `WebKit.ContextMenuAction` ×11, `UserStyleLevel`, `UserScriptInjectionTime`, `UserContentInjectedFrames`, `PolicyDecisionType`, `NavigationType` → nothing | Ruby symbols: `UNDESIRED_CONTEXT_MENU_ACTIONS` (11 entries), `:user`, `:end`, `:all_frames`, `:navigation_action` — `lib/web_view.rb:45-57, 215-240` |
-| `WebKit.Settings` → nothing | `view.settings.tap` — `lib/web_view.rb:159` |
-| `Gtk.License.GPL_3_0_ONLY` → nothing | `:gpl_3_0_only` — `lib/about_dialog.rb:51` |
-| `Gtk.StackPage` ×2 → `Gtk::Stack` | `header_bar_stack.add_named(window_title, 'title')` / `add_named(url_bar_clamp, 'url_bar')` — `lib/window.rb:140` |
-| `Adw.Breakpoint#add_setters` → nothing | `apply`/`unapply` handlers — `lib/window.rb#apply_narrow_window`, `#apply_narrow_content` |
-| `app.about` / `app.shortcuts` / `win.new-tab` ×8 absent from `lib/sidebar.rb` | `lib/sidebar_menu.rb:40-44, 72` — the targets are interpolated, so the scan cannot see them |
-| five `bind_property` / `bind_property_full` calls | `lib/window.rb#connect_webview`'s five `notify::` handlers, plus `#on_title_changed` reproducing the `from_value ? [true, …] : [false, null]` empty-title guard |
-| `Gtk.CustomFilter` / `FilterListModel` / `CustomSorter` / `SortListModel` | `lib/search_view.rb#rank` + `#refresh_results` (one `splice`). `FINDINGS.md` #1 is why |
+| `Gtk.ShortcutsWindow` / `ShortcutsSection` / `ShortcutsGroup` / `ShortcutsShortcut` | `data/ui/shortcuts.ui`, which is not under `lib/` — 27 objects, 30 translatable titles, 24 accelerators, 2 gesture rows |
+| `app.about` / `app.quit` / `app.shortcuts` | `lib/sidebar_menu.rb#ABOUT_SECTION`, `lib/shortcuts_window.rb#accels` — the scan's action regex does not match a hash value |
+| `Gtk.BuilderListItemFactory` | `Gtk::SignalListItemFactory` with `setup`/`bind` — `lib/browse_view.rb#list_factory`, `lib/search_view.rb#list_factory` |
+| `notify::is-online` | `on_online_changed:` callback — `lib/web_view.rb#update_is_online` → `lib/window.rb#on_webview_online` |
+| `notify::webview` | `BrowseView#webview=` calls `@on_webview_changed` → `lib/sidebar.rb#on_webview_changed` |
+| `notify::search-term` | `SearchView#search_term=` |
+| `search-view-selection-changed` | `on_selected:` callback → `lib/sidebar.rb#on_search_selection` |
+| `Gtk.ListScrollFlags.NONE` | the symbol `:none` |
+| `WebKit.ContextMenuAction` ×11, `UserStyleLevel`, `UserScriptInjectionTime`, `UserContentInjectedFrames`, `PolicyDecisionType` | Ruby symbols in `lib/web_view.rb` |
+| `Gtk.License.GPL_3_0_ONLY` | `:gpl_3_0_only` — `lib/about_dialog.rb` |
+| `Gtk.StackPage` ×2 | `header_bar_stack.add_named(window_title, 'title')` / `add_named(url_bar_clamp, 'url_bar')` |
+| `Adw.Breakpoint#add_setters` | `apply`/`unapply` handlers — `lib/window.rb#apply_narrow_window`, `#apply_narrow_content`; both breakpoints driven by a real resize in the drive run, all 16 consequences asserted |
+| five `bind_property` / `bind_property_full` calls | `lib/window.rb#connect_webview`'s five `notify::` handlers, with `#on_title_changed` reproducing the empty-title `[false, null]` guard |
+| `Gtk.CustomFilter` / `FilterListModel` / `CustomSorter` / `SortListModel` | `lib/search_view.rb#rank` + one `#refresh_results` splice. `FINDINGS.md` #1 is why |
+| `Gtk.UriLauncher` promisified at `src/init.js:8` | nowhere. Dead code upstream: `grep -rn UriLauncher` over `origin/main` finds only that one line and no call site. Recorded, not owed |
 
 ## Axis checks that passed in full
 
-* **CSS classes.** The 14 classes upstream applies — `main-window`, `flat`,
-  `osd`, `devel`, `searchbar`, `linked`, `circular`, `navigation-sidebar`,
-  `doc-tag`, `pill`, `small`, `compact`, `toolbar`, `theme-selector` — are all
-  applied in the port, and the rules behind `#top-toolbars`, `.searchbar` and
-  `button.pill.small` are `src/style.css` copied verbatim into
-  `lib/style.rb`'s `CSS` heredoc (diffed).
+* **CSS classes.** All 14 upstream classes — `main-window`, `flat`, `osd`,
+  `devel`, `searchbar`, `linked`, `circular`, `navigation-sidebar`, `doc-tag`,
+  `pill`, `small`, `compact`, `toolbar`, `theme-selector` — are applied, and
+  `comm` over the two css streams shows nothing upstream-only. `src/style.css`
+  is copied verbatim into `lib/style.rb`. The drive run confirms the provider
+  is on the display and carries the `#top-toolbars` rule.
 * **Actions.** 16 `win.*` + 4 app-level (`quit`, `about`, `color-scheme`,
-  `shortcuts`), matching upstream exactly.
-* **Keyboard shortcuts.** 17 `set_accels_for_action` calls; 24 accelerator
-  strings in the dialog, byte-identical to `src/Shortcuts.blp` after XML
-  escaping (diffed); 2 gesture rows kept with their `shortcut-type`.
-* **Installed data.** `data/app.desktop`, `data/app.gschema.xml`,
-  `data/app.service` and `data/app.metainfo.xml` are upstream's files with only
-  the app id substituted — `diff` after normalising the id is empty for all
-  four. 7 symbolic icons + 3 application icons present.
-* **Empty / error states.** The one empty state upstream has — the
-  `Adw.StatusPage` reading "No Results Found" / "Try a different search term",
-  `compact` — is at `lib/sidebar.rb#status_page` and wired at
-  `lib/sidebar.rb#on_search`. The find bar's "no matches" state (clearing
-  `label_info`) is at `lib/find_overlay.rb#on_not_found`. The offline/online
-  header swap is at `lib/window.rb#on_webview_online`. The one error state
+  `shortcuts`). All 20 activated in the drive run.
+* **Keyboard shortcuts.** 17 `set_accels_for_action` calls, all 17 asserted
+  bound at runtime; 24 accelerator strings in the dialog, byte-identical to
+  `src/Shortcuts.blp` after XML escaping; 2 gesture rows kept. The 12 tab
+  accelerators the dialog lists and `#accels` does not bind come from
+  `Adwaita::TabViewShortcuts::ALL_SHORTCUTS`, as upstream's do.
+* **Main menu, verified against the live model this round.** 4 sections; both
+  custom ids (`themeswitcher`, `zoom_buttons`) present; 8 bookmark items each
+  carrying `action="win.new-tab"` and its own `target`, labels and URLs
+  identical to `Sidebar.blp`; the about section's two items pointing at
+  `app.shortcuts` and `app.about`.
+* **Installed data.** `data/app.desktop`, `app.gschema.xml`, `app.service` and
+  `app.metainfo.xml` are upstream's with only the app id substituted. 7
+  symbolic icons + 3 application icons present, and `rake schema:validate`
+  runs `glib-compile-schemas --strict --dry-run` clean.
+* **Empty / error states.** The `Adw.StatusPage` ("No Results Found" / "Try a
+  different search term", `compact`) at `lib/sidebar.rb#status_page`, wired at
+  `#on_search`; the find bar's blank counter at
+  `lib/find_overlay.rb#on_not_found`; the offline/online header swap at
+  `lib/window.rb#on_webview_online` — all three driven. The one error state
   **not** ported is gap 1.
+* **One upstream behaviour faithfully reproduced, and it looks like a bug.**
+  `BrowseView#unselect_selection` does nothing, because upstream's
+  `Gtk.SingleSelection` leaves `autoselect` at `true`, which overrides
+  `can-unselect`. The port mirrors both lines. The drive run asserts the
+  behaviour that exists rather than the one the method name promises, and
+  flags it at both call sites. Correct as parity; still worth an upstream
+  issue.

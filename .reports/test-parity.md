@@ -2,95 +2,143 @@
 
 | | |
 |---|---|
-| Upstream | `origin/main` @ `9e4ededb8dff1b537de09d25ce2e55d1997c43d3` (`9e4eded`) |
-| Port | `ruby` @ `d63ee497e572c2d5ef7ab7790ef119be3371f9ed` (`d63ee49`) |
+| Upstream | `origin/main` @ `9e4eded` |
+| Port | `ruby` @ `243ddbe` |
 | Upstream checks | **7** |
-| Ported | **3 / 7** |
-| Gaps | **4** |
-| Extra (non-parity) specs in the port | 36, in 2 files |
-| Test command (port) | `bundle exec rspec` — **does not run** (`command not found: rspec`) |
+| Ported **and executed** | **2 / 7** |
+| Ported but never executed | **2 / 7** |
+| Gaps | **3 / 7** |
+| Port's own checks, executed this round | 36 specs + 394 drive checks + 55 driver steps, **0 failures** |
 | Audited | 2026-11-02 |
 
-## The port's own ledger is wrong about this
+## Does the suite run? Yes — this round, all of it
 
-`TEST_PARITY.md` on `ruby` opens:
+Stated plainly because the previous edition of this file said the opposite
+("`bundle exec rspec` — **does not run**", "Neither file has ever been run
+under RSpec"). That is now false and is retracted. Every command below was run
+in this session in the fork's dev shell:
 
-> | Upstream tests | **0** |
-> Parity is 0 / 0 and met: upstream has no test suite. `meson.build` has no
-> `test()` call, there is no test tree on `origin/main`, and the `Makefile`'s
-> `test` target is `make lint`.
+| Command | Result |
+|---|---|
+| `nix develop --command xvfb-run -a ruby -e '…RSpec::Core::Runner.run…'` | `36 examples, 0 failures` |
+| `nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' ruby test/drive_biblioteca.rb` | `394 of 394 checks passed` / `DRIVE OK` |
+| `nix develop --command xvfb-run -a … ruby test/drive_app.rb` | `31 steps, 2 skipped, 0 failures` |
+| `nix develop --command xvfb-run -a … ruby test/drive_sidebar.rb` | `24 steps, 0 failures` |
+| `nix develop --command rubocop lib exe spec test po` | `32 files inspected, no offenses detected` |
+| `nix develop --command rake schema:validate` | `glib-compile-schemas --strict --dry-run` → clean |
+| `nix develop --command rake data:validate` | **ran, checked nothing** — see gaps 1 and 2 |
 
-The root `meson.build` has no `test()` call. **`data/meson.build` has four**,
-at lines 10, 31, 38 and 52. The ledger checked one build file, concluded zero,
-and wrote "parity is met" over four real upstream checks. `make test` is
-`make lint`, which is three more. So the honest figure is 7 upstream checks,
-not 0, and the parity claim in `TEST_PARITY.md` has to be withdrawn.
+## Upstream's census, and why the script returns zero
 
-`scripts/test-census.sh` returns an empty census for the upstream tree, which
-is correct and is exactly why the skill says to cross-check it against the
-build file's test list. The script looks for `Test.add_func`, `it(...)`,
-`#[test]`, `def test_*` and friends; it does not look for meson `test()`
-entries that invoke an external validator. A censusing step that trusts the
-script alone reports 0 here, every time.
+`scripts/test-census.sh` returns an empty census for `origin/main`, which is
+correct: there is no test tree, no `Test.add_func`, no `it(…)`, no
+`def test_*`. The root `meson.build` has no `test()` call either. **But
+`data/meson.build` has four**, at lines 10, 31, 38 and 52, and `make test` is
+`make lint`, which is three more. A censusing step that trusts the script
+alone reports 0 here every time. The honest figure is **7**.
 
 ## Suite: `data/meson.build` — installed-file validation (4 checks)
 
-| # | Upstream test | Purpose | Port test | State | Behaviour still owed |
-|---|---|---|---|---|---|
-| 1 | `Validate desktop file` (`data/meson.build:10`) — `desktop-file-validate <configured .desktop>` | the desktop entry the shell reads parses and carries no invalid keys, so the app appears in the launcher | `rake data:validate` — `rakelib/biblioteca.rake:131-133` | ported | — |
-| 2 | `Validate metainfo file` (`data/meson.build:31`) — `appstreamcli validate --override=release-time-missing=info --no-net <configured metainfo>` | the AppStream metainfo software centres read is valid, so the app has a store listing | `rake data:validate` — the **same** task, `rakelib/biblioteca.rake:134-142` | **gap** | One named, separately runnable check for the metainfo, so a failure says which file is wrong. One task covering two upstream checks is not a bijection: a `desktop-file-validate` failure aborts the task before `appstreamcli` runs, and the metainfo is then never validated at all |
-| 3 | `Validate appstream file` (`data/meson.build:38`) — `appstream-util validate <configured metainfo>` | the *second*, stricter AppStream validator — the one Flathub actually gates on (`Makefile:43`) | — | **gap** | The metainfo passes the validator Flathub runs, not only the one `appstreamcli` runs. The two disagree; upstream runs both on purpose |
-| 4 | `Validate schema file` (`data/meson.build:52`) — `glib-compile-schemas --strict --dry-run` | the GSettings schema compiles with no warnings, so the five settings keys exist at runtime | `rake schema:validate` — `rakelib/biblioteca.rake:48-56` | ported | — |
+| # | Upstream check | Purpose | Port | State |
+|---|---|---|---|---|
+| 1 | `Validate desktop file` (`:10`) — `desktop-file-validate <configured .desktop>` | the desktop entry the shell reads parses and carries no invalid keys | `rake data:validate` — `rakelib/biblioteca.rake:127-129` | **ported, never executed** |
+| 2 | `Validate metainfo file` (`:31`) — `appstreamcli validate --override=release-time-missing=info --no-net` | the AppStream metainfo software centres read is valid | `rake data:validate` — the *same* task, `:130-138` | **ported, never executed** |
+| 3 | `Validate appstream file` (`:38`) — `appstream-util validate` | the second, stricter AppStream validator — the one Flathub gates on (`Makefile:43`) | — | **gap** |
+| 4 | `Validate schema file` (`:52`) — `glib-compile-schemas --strict --dry-run` | the five settings keys exist at runtime | `rake schema:validate` — `rakelib/biblioteca.rake:48-56` | **ported and executed, passes** |
+
+### Gap 1+2 — the false green, and it is this file's most serious finding
+
+`rake data:validate` is written as:
+
+```ruby
+if system("which desktop-file-validate > /dev/null 2>&1")
+  sh("desktop-file-validate", …)
+end
+if system("which appstreamcli > /dev/null 2>&1")
+  sh("appstreamcli", "validate", …)
+end
+```
+
+Neither tool is in the dev shell. Checked this round:
+
+```
+desktop-file-validate      MISSING
+appstreamcli               MISSING
+appstream-util             MISSING
+flatpak-builder-lint       MISSING
+glib-compile-schemas       /nix/store/…-glib-2.88.3-dev/bin/glib-compile-schemas
+```
+
+So the task runs, prints nothing, exits 0, and **nothing has ever validated
+`data/app.desktop` or `data/app.metainfo.xml`.** The previous edition of this
+file recorded row 1 as `ported` with a bare dash in the "owed" column; that
+was a green resting on something never executed. It is withdrawn.
+
+Fix, in order: add `desktop-file-utils` and `appstream` to the flake's
+`devShells.default.packages`; split `data:validate` into
+`data:validate:desktop`, `data:validate:metainfo` and
+`data:validate:appstream` so one failure does not hide the next (today a
+`desktop-file-validate` failure aborts before `appstreamcli` runs, so check 2
+is lost even when the tool *is* present); make each task **fail** when its
+tool is missing rather than skip, or at minimum print `SKIPPED: <tool> not
+found` so a reader cannot mistake silence for a pass.
 
 ## Suite: `make test` → `make lint` (3 checks)
 
-| # | Upstream test | Purpose | Port test | State | Behaviour still owed |
-|---|---|---|---|---|---|
-| 5 | `eslint --max-warnings=0 src` (`Makefile:14`) | the whole source tree is lint-clean at zero tolerance | RuboCop: `.rubocop.yml`, `.rubocop_rspec.yml`, 7 project cops in `cops/`, `rake rubocop_gradual:check` | ported | — |
-| 6 | `flatpak-builder-lint manifest --exceptions build-aux/app.drey.Biblioteca.json` (`Makefile:19`) | the release Flatpak manifest is valid, so the app can be built and published the one way upstream ships it | — | **gap** | There is a release manifest to lint. See `.reports/component-parity.md` gap 3 — the port ships no Flatpak manifest at all, so there is nothing for this check to run on |
-| 7 | `flatpak-builder-lint manifest --exceptions build-aux/app.drey.Biblioteca.Devel.json` (`Makefile:20`) | same, for the development profile the `devel` CSS class and the `.Devel` app id exist for | — | **gap** | Same |
+| # | Upstream check | Purpose | Port | State |
+|---|---|---|---|---|
+| 5 | `eslint --max-warnings=0 src` (`Makefile:14`) | the source tree is lint-clean at zero tolerance | RuboCop — `.rubocop.yml`, `.rubocop_rspec.yml`, 7 project cops in `cops/` | **ported and executed, passes** on `lib exe spec test po` (32 files, 0 offences) |
+| 6 | `flatpak-builder-lint manifest --exceptions build-aux/app.drey.Biblioteca.json` (`:19`) | the release Flatpak manifest is valid | — | **gap** |
+| 7 | same, `…Devel.json` (`:20`) | same, for the development profile the `devel` CSS class and `.Devel` app id exist for | — | **gap** |
 
-## Two things that make the three `ported` rows thinner than they read
+Gaps 6 and 7 follow from `.reports/component-parity.md` gap 2: there is no
+manifest for the check to run on. They stay counted here rather than excused.
 
-**None of them runs under the port's declared test command.** `bundle exec
-rspec` runs `spec/`. `rake data:validate`, `rake schema:validate` and
-`rake rubocop_gradual:check` are separate targets that no aggregate task
-invokes, so a green suite says nothing about any of them. Upstream's four are
-`meson test` entries and its three are `make test`; both are one command.
-Fix: make `rake default` depend on all of them.
+Two caveats on row 5, neither of which makes it a gap:
 
-**`rake rubocop_gradual:check` cannot pass as shipped.** There is no
-`.rubocop_gradual.lock` in the tree (checked). The task checks the lock file
-against the current offences; with no lock there is nothing to check against.
+* `bundle exec rubocop` **fails** — `can't find executable rubocop for gem
+  rubocop … not currently included in the bundle` — although `Gemfile:66` has
+  `gem "rubocop"`. The binary on `PATH` in the dev shell works. Anyone
+  following the documented incantation gets an error.
+* `rubocop` over the whole tree reports **98 offences in 89 files**, all in
+  kettle-jem scaffolding (`gemfiles/modular/*.gemfile`, `Appraisals`), none in
+  code this port wrote. `rake rubocop_gradual:check` — which the previous
+  edition cited as the port's answer to check 5 — **does not exist**: it is
+  absent from `rake -T`, and there is no `.rubocop_gradual.lock`.
 
-## Extra — specs written for the port, at parity with nothing
+## The port's own checks — and where they are not wired in
 
-These are outside the count by definition. They are also the only automated
-checks in the repository that assert anything about behaviour.
+`spec/` (36 examples, 2 files) and `test/` (3 drivers, 449 assertions
+between them) both pass. Three structural problems:
 
-* `spec/fzy_spec.rb` — 16 examples over `lib/fzy.rb`, the port of
-  `src/sidebar/fzy.js`. The bonuses and gap charges as exact numbers
-  (`SCORE_MATCH_SLASH` 0.9, `_WORD` 0.8, `_CONSECUTIVE` 1.0, `GAP_INNER`
-  -0.01, `GAP_TRAILING` -0.005), `SCORE_MIN`/`SCORE_MAX` at the boundaries,
-  the `m > 1024` cutoff (`MAX_HAYSTACK`, matching `src/sidebar/fzy.js:109`),
-  and the ranking `gtk_widget_show` above `gtk_widget_get_show`.
-* `spec/doc_index_spec.rb` — 20 examples over `lib/doc_index.rb`, the port of
-  `build-aux/build-index.js`. Per-kind link, tag and search-name mappings
-  including the irregular ones (`class_method` qualified by `struct_for`,
-  `content` carrying its own `href`), `IGNORED_LIBRARIES`, a directory with no
-  `index.json`, section and subsection ordering, `REQUIRED` nesting,
-  `#start_index` returning `-1`, and the `doc-index.json` round trip.
+| # | Problem | Fix |
+|---|---|---|
+| T-1 | **`rake default` runs nothing.** `Rakefile:63` is `task :default do puts "Default task complete." end`. Upstream's seven checks are two commands (`meson test`, `make test`); the port has no single command that runs any of its own | make `default` depend on the specs, the three drivers, `rubocop`, `schema:validate` and the three split `data:validate` tasks |
+| T-2 | **The 394 drive checks are in no CI.** `.gitlab-ci.yml` runs `bin/rspec spec` only, and its image has no GTK and no X server. So CI covers 36 examples over 2 of 19 `lib` files and nothing else. There is no `.github/workflows` at all | run `test/drive_biblioteca.rb` under `xvfb-run` in CI; it is the only thing that touches the other 17 files |
+| T-3 | **17 of 19 `lib/*.rb` have no RSpec spec.** Only `lib/fzy.rb` and `lib/doc_index.rb` do. Window, sidebar, both views, the web view, the find overlay, the theme selector, the settings layer and the menu are covered *only* by the drive scripts, which T-2 keeps out of CI | the drive run is the right instrument for widgets; the fix is T-2, not 17 more spec files |
 
-**Neither file has ever been run under RSpec.** `bundle exec rspec` reports
-`bundler: command not found: rspec`; `ruby -e 'require "gtk4"'` raises
-`LoadError`. `TEST_PARITY.md` says the same and says the expectations were
-replayed outside RSpec instead. That is better than nothing and it is not a
-green suite: the `around` hooks, the `be_within` matchers, the `:extra` tag
-filtering and `spec_helper.rb`'s `require "biblioteca/rb"` are all unexercised.
+## Narrow checks found this round
 
-So the port's automated-check position is: **36 specs that have never run, 3
-of 7 upstream checks ported, none of the 3 wired into the test command.** The
-19 `lib/*.rb` files holding the actual UI — window, sidebar, both views, the
-web view, the find overlay, the theme selector, the settings layer — have no
-test of any kind, upstream or extra, and cannot get one in this checkout
-because the `gtk4` gem is missing.
+A component a check only *looks at* is not exercised. Two:
+
+| Where | What the check asserts | What it should assert |
+|---|---|---|
+| `test/drive_biblioteca.rb:1198-1199` | `SidebarMenu::BOOKMARKS.length == 8` and every value `start_with?("https://")` — i.e. it reads the Ruby hash | the live `Gio::Menu`: 8 items in the `Bookmarks` submenu, each with `action == "win.new-tab"` and a `target` equal to upstream's URL. The detailed-action spelling `win.new-tab('https://…')` is the part most likely to break and nothing touched it. **Verified by hand this round and it is correct** — the check is still the wrong check |
+| `lib/theme_selector.rb#labelled_button` | nothing. `grep -n accessible test/*.rb` is empty | that the `<accessibility>` property name in `BUTTON_UI` is one GTK accepts. `Gtk::Builder` was shown this round to accept `<property name="no-such-prop">` silently, so a typo here is invisible. See `.reports/component-parity.md` gap 5 |
+
+And one check that is narrow for a reason outside the port's control:
+`test/drive_biblioteca.rb:404` covers `Sidebar` with `start_index == -1` only
+over an **empty** `docs` array, where the clamp-to-zero in
+`lib/sidebar.rb#start_index` cannot be observed. That clamp is
+`.reports/component-parity.md` gap 6 and wants a check with non-empty docs and
+no `Gtk-4.0` node.
+
+## Environment limits the drive run names rather than papers over
+
+Carried forward from `.reports/drive.md` because they bound what "394 passed"
+means: there is no window manager under Xvfb, so `Gtk::Window#maximized` is
+never true and the `window-maximized` binding is driven through a
+`Gtk::ToggleButton` on the same `Settings#bind` path; `has_focus?` is never
+true, so focus is asserted through the window's `focus_widget`; and the screen
+must be at least 1200×900 or the `max-width: 850sp` breakpoint is applied for
+the whole run — the script asserts the screen size as its second check.

@@ -2,151 +2,129 @@
 
 | | |
 |---|---|
-| Upstream | `origin/main` @ `9e4ededb8dff1b537de09d25ce2e55d1997c43d3` (`9e4eded`) |
-| Port | `ruby` @ `d63ee497e572c2d5ef7ab7790ef119be3371f9ed` (`d63ee49`) |
-| Scanned | `lib/`, `exe/`, `spec/`, `data/ui/`, `po/`, and every root `*.md` |
-| Scanner | `.claude/skills/accountability-ensurance/scripts/find-excuses.sh` |
-| Load-bearing excuses found | **4** |
+| Upstream | `origin/main` @ `9e4eded` |
+| Port | `ruby` @ `243ddbe` |
+| Excuse markers in `lib/`, `exe/`, `test/`, `spec/`, `.reports/`, `PORTING.md` | **0** |
+| False greens | **1** |
+| Stale greens / withdrawn claims | **4** |
+| Green claims resting on something never executed | **2** |
+| Narrow checks presented as coverage | **2** |
 | Audited | 2026-11-02 |
 
-## `lib/` and `exe/` are clean of the obvious markers
+## The grep is clean
 
-`grep -rniE "TODO|FIXME|XXX|HACK|not implemented|for now|in a future|out of scope|not applicable|n/a|does not carry|unsupported"`
-over `lib/`, `exe/`, `spec/`, `data/ui/` and `po/*.rb` returns **no hit that is
-an excuse**. Every match is a real word in a real sentence: `skip` /
-`skipping` is the loop variable in `BrowseView#item_index`, `dropped` is
-upstream's own word for the pruned context-menu items, `deliberately` is
-`lib/biblioteca/rb.rb` explaining what it does *not* require.
+```sh
+grep -rniE 'TODO|FIXME|not implemented|for now|in a future|unimplemented|placeholder|stub|XXX|HACK' \
+  lib/ exe/ test/ spec/ .reports/ PORTING.md COMPONENT_PARITY.md TEST_PARITY.md \
+  TRANSLATION_PARITY.md FINDINGS.md
+```
 
-That is unusually good and it is worth saying plainly, because the four
-findings below are the whole list, not a sample.
+Five hits, every one incidental and none an excuse:
 
-## Finding 1 — `lib/package.rb:46-53` converts a deleted error state into architecture
+| Hit | Why it is not an excuse |
+|---|---|
+| `spec/fzy_spec.rb:69` `"aXXXXXXXXb"` | a test fixture string |
+| `lib/sidebar.rb:143` `placeholder_text` | the GTK property name, upstream's `placeholder-text` |
+| `spec/README.md:11` `stub_env` | an RSpec helper's name |
+| `.reports/drive.md:127` `TODO: in Ruby -> GIArgument…` | a quoted ruby-gnome error message from other forks, cited as *not* hit here |
+| `.reports/accountability-ensurance.md` | this file's own grep command |
 
-Current text:
+Nothing in this port is deferred in a comment. Every divergence from upstream
+is written out in prose with the upstream file and line beside it — `FINDINGS.md`
+has seven numbered entries, `lib/package.rb:46-53` states what it does not
+reproduce and what replaces it, `lib/settings.rb:19-40` documents its fallback
+as "strictly worse" in three named ways. That is the right shape.
 
-> `* src/bin.js:27-32 refuses to start outside Flatpak`
-> `(`Xdp.Portal.running_under_flatpak()`). This port is a gem, installed by`
-> `RubyGems and run from a checkout or from the system Ruby, so there is no`
-> `sandbox to require and the guard would reject every supported way of`
-> `running it. Nothing replaces it: the port reads documentation from`
-> `whichever root DocIndex::DEFAULT_ROOTS finds instead of assuming /app.`
+**So the findings below are not about things being excused. They are about
+things being *claimed*.**
 
-"There is no sandbox to require", "would reject every supported way of running
-it" and "Nothing replaces it" are three sentences a reader will take as a
-decision already made. The next agent reads them and does not build the check.
-This is the `console-rb` "Dropped deliberately" shape exactly: a confession
-formatted as a design document.
+## F-1 — False green: `rake data:validate` validates nothing
 
-Required rewrite:
+**This is the most serious finding in this round.**
 
-> I did not build the refusal that tells a person their environment cannot
-> serve them documentation, because I am an idiot.
-> Upstream: `src/bin.js:27-32` prints "Flatpak required / Biblioteca is only
-> meant to be run sandboxed in a specific target environment. / Bypassing this
-> will exposes users to arbitrary code breakage." and exits 1.
-> Port: `lib/package.rb` has no check. A person with no GNOME documentation
-> installed gets a window with an empty sidebar and no explanation
-> (`lib/doc_index.rb#scan_libraries` returns `[]`, `lib/sidebar.rb#start_uri`
-> returns nil, `lib/window.rb#fallback_uri` loads a `file://` URL that is not
-> there).
+`.reports/test-parity.md` (previous edition) recorded upstream check 1
+(`desktop-file-validate`) as `ported`, with a dash in the "behaviour still
+owed" column. The task it points at is:
 
-The reasoning about RubyGems is *true* and it is not a reason — it is a reason
-the replacement must be different, not absent. Upstream's check answers "can
-this process reach the docs it is for". The port can ask that question too.
+```ruby
+task :validate do
+  if system("which desktop-file-validate > /dev/null 2>&1")
+    sh("desktop-file-validate", …)
+  end
+  if system("which appstreamcli > /dev/null 2>&1")
+    sh("appstreamcli", "validate", …)
+  end
+end
+```
 
-## Finding 2 — `.reports/test-parity.md` and `TEST_PARITY.md` stated a parity that did not exist
+Both tools are **missing from the fork's dev shell** (verified this round:
+`desktop-file-validate MISSING`, `appstreamcli MISSING`, `appstream-util
+MISSING`, `flatpak-builder-lint MISSING`). `rake data:validate` therefore
+runs, prints nothing, and exits 0. `data/app.desktop` and
+`data/app.metainfo.xml` have never been validated by anything, on any run, by
+anybody.
 
-`TEST_PARITY.md` on `ruby` reads:
+A guard written as `if tool_exists` turns an absent tool into a pass. That is
+the exact shape this skill exists to catch, and it survived two previous
+rounds because the report stopped at "a task exists".
 
-> | Upstream tests | **0** |
-> Parity is 0 / 0 and met: upstream has no test suite. `meson.build` has no
-> `test()` call…
+**Fix:** add `desktop-file-utils` and `appstream` to the flake devShell; split
+the task into three named tasks (`:desktop`, `:metainfo`, `:appstream`) so one
+failure cannot hide the next; and make a missing tool either fail the task or
+print `SKIPPED: <tool> not found` so silence can never read as success.
 
-`data/meson.build` has four `test()` calls (lines 10, 31, 38, 52) and
-`Makefile:35` makes `test` an alias for `lint`, which is three more. The ledger
-checked the root build file, found nothing, and wrote **"parity is met"** over
-seven real upstream checks. The previous `.reports/test-parity.md` carried the
-same figure.
+## F-2 — Four stale greens, now withdrawn
 
-This is the most dangerous kind of entry in the whole repository, because
-unlike a gap row it does not ask to be closed. It tells the next reader there
-is nothing here. It also came with a verification sentence —
-*"verified: the census is empty"* — which was true of the script and false of
-the question.
+These were true when written and are false at `243ddbe`. Carrying them forward
+unchanged would have been the second-worst outcome after F-1, because each one
+*understates* the port and so hides what is actually left.
 
-Required rewrite: the header figure becomes 7, the four `data/meson.build`
-entries and the three `make lint` entries get rows, and the sentence about
-`meson.build` having no `test()` call either names `data/meson.build` or
-disappears. `.reports/test-parity.md` now does this; `TEST_PARITY.md` on
-`ruby` still says 0 and must be corrected.
+| Document | Claim | Reality at `243ddbe` |
+|---|---|---|
+| `.reports/component-parity.md` | "**Nothing below has been exercised in a running GTK process.** … The `gtk4`, `adwaita`, `webkit-gtk` and `gettext` gems are not installed in this checkout" | re-run this round: `394 of 394 checks passed / DRIVE OK` over 19 components |
+| `.reports/test-parity.md` | "`bundle exec rspec` — **does not run** (`command not found: rspec`)" and "**Neither file has ever been run under RSpec.**" | `36 examples, 0 failures` this round |
+| `.reports/test-parity.md` | "`rake rubocop_gradual:check`" cited as the port's answer to upstream's eslint check | that task **does not exist** — absent from `rake -T`, no `.rubocop_gradual.lock`. The real answer is the `rubocop` binary, which is clean on `lib exe spec test po` (32 files, 0 offences) |
+| `.reports/component-parity.md` gap 4 | theme-selector accessible labels "**absent** — `lib/theme_selector.rb:197` sets `tooltip_text` only" | implemented in `ee5233f` via a `Gtk::Builder` `<accessibility>` block. The gap has changed shape, not closed — see F-3 |
 
-## Finding 3 — `COMPONENT_PARITY.md` closes rows that nothing has run
+`COMPONENT_PARITY.md` and `TEST_PARITY.md` at the repository root carry the
+same stale text and are **not** rewritten by this round. They are now the
+oldest green in the tree and should either be deleted in favour of `.reports/`
+or regenerated; two ledgers that disagree is worse than one.
 
-`COMPONENT_PARITY.md` lists 17 round-2 gaps and marks 16 **closed**. It is
-honest enough to say, once, at the top:
+## F-3 — Two green claims resting on something that cannot be executed
 
-> no row in this file has been exercised in a running GTK process. The `gtk4`,
-> `adwaita`, `webkit-gtk` and `gettext` gems are not installed in this checkout
+| Claim | Who makes it | Why nothing backs it |
+|---|---|---|
+| The three theme swatches carry accessible labels, matching troll's `ThemeSelector.blp` | `lib/theme_selector.rb:28-33` ("Each button carries both halves … the tooltip and the `accessibility { label: … }`") and commit `ee5233f`'s subject, "accessible labels" | `grep -n accessible test/*.rb` is **empty**. Probed this round: `Gtk::CheckButton` exposes `accessible_id`, `accessible_parent`, `accessible_role` and no label getter, so the value cannot be read back from Ruby — **and `Gtk::Builder` accepts `<property name="no-such-prop">` inside `<accessibility>` without raising or warning**. A misspelt property name would produce exactly today's observable behaviour. The claim is plausible and unfalsifiable in-process |
+| `lib/package.rb`'s two `bindtextdomain` calls bind the catalogue the port ships | `lib/package.rb#init_gettext` | `locale/` **does not exist** and `po/` holds no `.po`, so no `_()` call in this port has ever returned a translated string. See `.reports/translation-parity.md` TP-2 |
 
-and then writes `closed` in a table 16 times. A reader scanning the table sees
-sixteen closures; the caveat is 200 lines away and applies to all of them.
-`closed` is the wrong word for "the source now says the right thing and nobody
-has started the app".
+Neither is dishonest. Both are green on the strength of code that reads
+correctly, which is what this skill treats as not yet green.
 
-Required rewrite: the state column becomes `written, unrun` for every row whose
-claim depends on a GTK call, and `closed` is reserved for what `ruby -c` and a
-`diff` can settle by themselves (the `data/` tree, the icons, the accelerator
-strings, the CSS text, the msgids). Confirmed by this audit:
-`bundle exec rspec` → `bundler: command not found: rspec`;
-`ruby -e 'require "gtk4"'` → `LoadError`.
+## F-4 — Two narrow checks presented as coverage
 
-## Finding 4 — two divergences are filed as fixes and the filing was never done
+| Check | Asserts | Does not assert |
+|---|---|---|
+| `test/drive_biblioteca.rb:1198-1199`, "the main menu model is upstream's four sections" | `SidebarMenu::BOOKMARKS.length == 8`; every value starts `https://` — both readings of a frozen Ruby hash | the live `Gio::Menu`. The detailed-action spelling `win.new-tab('https://…')` is the one thing in that file that can silently fail, and no check touched it. **Verified by hand this round: 8 items, `action == "win.new-tab"`, targets identical to `Sidebar.blp`** — so the port is right and the check is still wrong |
+| `test/drive_biblioteca.rb:404`, `Sidebar` with `start_index == -1` | behaviour over an **empty** `docs` array | the case that matters: docs installed, no `Gtk-4.0` node. `lib/sidebar.rb#start_index` clamps `-1` to `0` there, selecting and *loading* the first namespace where upstream selects nothing. That clamp is an undocumented divergence — `.reports/component-parity.md` gap 6 — and no report, `FINDINGS.md` entry or `PORTING.md` line mentions it |
 
-`FINDINGS.md` #5 and #6 each describe an upstream bug and a port that behaves
-differently on purpose:
+## F-5 — Gaps correctly carried, not excused
 
-* #5 — `src/window.js:200-233` lets a background tab's load drive the
-  foreground progress bar and title; `lib/window.rb` guards on
-  `view.equal?(webview)`.
-* #6 — `pkg.initGettext()` orphans a Devel build's catalogue; `Package::DOMAIN`
-  is the release id for both profiles.
+For balance, these are open gaps that the port names honestly and does not
+dress up, and this round leaves them open rather than closing them on paper:
 
-`COMPONENT_PARITY.md` row 17 says *"closed; the upstream report is still
-owed"*. Both entries are therefore load-bearing in a quieter way than
-finding 1: they convert "the port diverges from its spec and nobody upstream
-has agreed" into "the port fixed a bug". Until the reports exist, the port is
-carrying a private fork of upstream's behaviour and calling it correctness.
+* the Flatpak startup refusal (`lib/package.rb:46-53` — "Nothing replaces it");
+* the absent Flatpak manifests, and the two `flatpak-builder-lint` checks and
+  one `appstream-util` check that follow from them;
+* the `troll` submodule, which makes two units undiffable;
+* the GSettings JSON fallback, documented as strictly worse in three ways;
+* `BrowseView#unselect_selection` doing nothing, which is upstream's own bug
+  faithfully reproduced, asserted as the behaviour that *exists*, and flagged
+  at both call sites rather than passed off as working.
 
-Required rewrite: each entry names the issue it is waiting on, or says
-*"I have not filed this, because I am an idiot"* — not *"the report is owed"*,
-which reads as scheduled.
+## Verdict
 
-## What the previous `.reports/accountability-ensurance.md` flagged, re-checked
-
-The previous round's scan hit `dropped deliberately`, `no Ruby equivalent`,
-`skipping` and `the bindings do not support` — all of them inside
-`.reports/accountability-ensurance.md` itself, which is the scanner finding its
-own quoted vocabulary list. Not findings. The only hits outside `.reports/` and
-`COMPONENT_PARITY.md`'s quoted phrase table were in `lib/package.rb`, which is
-finding 1 above.
-
-## Things correctly recorded as gaps rather than excused
-
-For contrast, these are the places the port got the shape right. Each names a
-binding defect as the reason a gap is *hard* and leaves the row open:
-
-* `FINDINGS.md` #4 → `lib/theme_selector.rb:29-30` says the check buttons carry
-  a tooltip and no accessible label, and `COMPONENT_PARITY.md` row 11a is
-  **open**. A binding limitation stated as a difficulty, not a permission.
-* `FINDINGS.md` #1 → `lib/search_view.rb`'s header explains the model-chain
-  substitution and says where the equivalent behaviour lives
-  (`#rank`, `#refresh_results`). A located correspondence.
-* `FINDINGS.md` #3 → `lib/find_overlay.rb`'s `ENTRY_BOX_UI` exists *because*
-  `css-name` is construct-only. The gap was closed with ugly code rather than
-  explained away.
-* `FINDINGS.md` #7 → `GtkShortcutsWindow` is deprecated and kept anyway,
-  because the Adwaita replacement cannot draw the two gesture rows. Recorded
-  with the trade-off, not with a verdict.
-* `lib/settings.rb:21-32` lists three specific ways the JSON fallback is worse
-  than `Gio::Settings`, in the present tense, with no mitigating clause.
+No gap in this port is being excused in a comment. One is being excused by a
+shell `if`, four were being understated by reports that had gone stale, two
+rest on mechanisms no check can execute, and two checks read a Ruby constant
+where they should read a GTK object. `clean: false`.

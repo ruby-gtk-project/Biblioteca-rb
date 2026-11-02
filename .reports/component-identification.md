@@ -1,216 +1,207 @@
-# Component identification — Biblioteca / Biblioteca-rb
+# Component identification — Biblioteca-rb
 
 | | |
 |---|---|
-| Upstream | `origin/main` @ `9e4ededb8dff1b537de09d25ce2e55d1997c43d3` (`9e4eded`) |
-| Port | `ruby` @ `d63ee497e572c2d5ef7ab7790ef119be3371f9ed` (`d63ee49`) |
-| Scanner | `.claude/skills/component-identification/scripts/component-scan.sh` |
-| Upstream rows | 154 |
-| Port rows | 175 |
-| Scanned | 2026-11-02 |
+| Upstream | `origin/main` @ `9e4eded` |
+| Port | `ruby` @ `243ddbe` |
+| Upstream units | 13 (11 widget classes + the application class + the standalone shortcuts definition) |
+| Port units | 19 `lib/*.rb` + `data/ui/shortcuts.ui` |
+| Units identifiable from the pinned ref | 11 of 13 |
+| **Units that cannot be identified at all** | **2** — see Gap CI-1 |
+| Scans | `scripts/component-scan.sh` on `src/` and on `lib/` |
+| Audited | 2026-11-02 |
 
-Both trees were scanned and both were then read. The scan is a lead, not a
-verdict: on the upstream side it double-counts a `.blp` template root against
-its JS class, and on the port side it reads widget and enum names out of
-comments and heredocs. Every count below that differs between the two sides
-was resolved by opening the files.
+Upstream is a GJS app with a declarative half, so Step 1 of the skill applies:
+the seven `.blp` files and the one `menu` block in them *are* the inventory,
+and the `.js` beside each one carries the callbacks. Rows from the two halves
+are unioned per port file before anything is compared.
 
-## Step 1 — the template files, which are the unit list
+## Unit map
 
-Upstream builds its UI from six Blueprint templates plus three `menu`/UI
-blocks:
+One upstream unit (`.blp` + `.js`, or the submodule file) → one port file.
 
-| Template | Root type | Owning JS |
-|---|---|---|
-| `src/window.blp` | `Adw.ApplicationWindow` | `src/window.js` |
-| `src/FindOverlay.blp` | `Gtk.Overlay` | `src/FindOverlay.js` |
-| `src/WebView.blp` | `WebKit.WebView` | `src/WebView.js` |
-| `src/Shortcuts.blp` | `Gtk.ShortcutsWindow` (not a template — a named object) | `src/Shortcuts.js` |
-| `src/sidebar/Sidebar.blp` | `Adw.NavigationPage` + `menu menu_app` | `src/sidebar/Sidebar.js` |
-| `src/sidebar/BrowseView.blp` | `Gtk.ScrolledWindow` | `src/sidebar/BrowseView.js` |
-| `src/sidebar/SearchView.blp` | `Gtk.ScrolledWindow` | `src/sidebar/SearchView.js` |
-| `src/sidebar/ZoomButtons.blp` | `Gtk.Box` | `src/sidebar/ZoomButtons.js` |
+| # | Unit | Upstream files | Port file |
+|---:|---|---|---|
+| 1 | Application | `src/application.js`, `src/actions.js`, `src/main.js`, `src/init.js`, `src/bin.js` | `lib/biblioteca/application.rb`, `lib/package.rb` |
+| 2 | About dialog | `src/about.js` | `lib/about_dialog.rb` |
+| 3 | Stylesheet | `src/style.css` | `lib/style.rb` |
+| 4 | Settings | `data/app.gschema.xml`, `src/util.js` | `lib/settings.rb` |
+| 5 | Window | `src/window.blp` + `src/window.js` | `lib/window.rb` |
+| 6 | Window geometry | `troll/src/util.js` `persistWindowState` | `lib/window_state.rb` |
+| 7 | Shortcuts (dialog + every accel) | `src/Shortcuts.blp` + `src/Shortcuts.js` | `lib/shortcuts_window.rb` + `data/ui/shortcuts.ui` |
+| 8 | Find overlay | `src/FindOverlay.blp` + `src/FindOverlay.js` | `lib/find_overlay.rb` |
+| 9 | Web view | `src/WebView.blp` + `src/WebView.js` | `lib/web_view.rb` |
+| 10 | Sidebar | `src/sidebar/Sidebar.blp` + `Sidebar.js` | `lib/sidebar.rb` |
+| 11 | Main menu (`menu menu_app`) | the `menu` block in `Sidebar.blp` | `lib/sidebar_menu.rb` |
+| 12 | Theme selector | `troll/src/widgets/ThemeSelector.{js,blp,css}` | `lib/theme_selector.rb` |
+| 13 | Zoom row | `src/sidebar/ZoomButtons.blp` + `ZoomButtons.js` | `lib/zoom_buttons.rb` |
+| 14 | Browse tree | `src/sidebar/BrowseView.blp` + `BrowseView.js` | `lib/browse_view.rb` |
+| 15 | Search results | `src/sidebar/SearchView.blp` + `SearchView.js` | `lib/search_view.rb` |
+| 16 | Tree node | `src/sidebar/DocumentationPage.js` | `lib/documentation_page.rb` |
+| 17 | Index builder | `build-aux/build-index.js` | `lib/doc_index.rb` |
+| 18 | Fuzzy matcher | `src/sidebar/fzy.js` | `lib/fzy.rb` |
 
-The port has **one** UI file, `data/ui/shortcuts.ui` (a GtkBuilder translation
-of `src/Shortcuts.blp`, kept because `GtkShortcutsWindow` has no usable Ruby
-constructor — `FINDINGS.md` #7). Everything else is built as memoized
-widget methods, which is the house style.
+No port file is without an upstream counterpart. No upstream `.blp`/`.js` pair
+is without a port file.
 
-Two upstream dependencies are **git submodules and are not present on
-`origin/main`**: `troll/` (a gitlink) and the `src/biblioteca` launcher's
-`@app_id@` substitution. `troll/src/widgets/ThemeSelector.{js,blp,css}` and
-`troll/src/util.js`'s `persistWindowState` are therefore *not readable from the
-pinned upstream ref*. The port carries `lib/theme_selector.rb` and
-`lib/window_state.rb` against them, and **their parity cannot be verified from
-`origin/main` at all.** That is a hole in this audit, not a pass.
+## Scan totals
 
-## Step 2 — file mapping
+| Stream | Upstream `src/` | Port `lib/` |
+|---|---:|---:|
+| widget rows / instances | 55 / 92 | 55 / 71 |
+| `type` rows | 28 | 34 |
+| controller rows | 2 | 2 |
+| css rows | 16 | 17 |
+| action rows | 21 | 17 |
+| signal rows | 32 | 46 |
 
-```
-src/bin.js + src/main.js + src/init.js + src/application.js + src/actions.js
-                                            -> lib/biblioteca/application.rb
-                                               lib/package.rb
-src/util.js + data/app.gschema.xml          -> lib/settings.rb
-src/about.js                                -> lib/about_dialog.rb
-src/style.css                               -> lib/style.rb
-src/window.blp + src/window.js              -> lib/window.rb
-troll/src/util.js (persistWindowState)      -> lib/window_state.rb        [unreadable upstream]
-src/Shortcuts.blp + src/Shortcuts.js        -> data/ui/shortcuts.ui
-                                               lib/shortcuts_window.rb
-src/FindOverlay.blp + src/FindOverlay.js    -> lib/find_overlay.rb
-src/WebView.blp + src/WebView.js            -> lib/web_view.rb
-src/sidebar/Sidebar.blp + Sidebar.js        -> lib/sidebar.rb
-  menu menu_app (in Sidebar.blp)            -> lib/sidebar_menu.rb
-troll/src/widgets/ThemeSelector.*           -> lib/theme_selector.rb      [unreadable upstream]
-src/sidebar/ZoomButtons.blp + .js           -> lib/zoom_buttons.rb
-src/sidebar/BrowseView.blp + .js            -> lib/browse_view.rb
-src/sidebar/SearchView.blp + .js            -> lib/search_view.rb
-src/sidebar/DocumentationPage.js            -> lib/documentation_page.rb
-src/sidebar/fzy.js                          -> lib/fzy.rb
-build-aux/build-index.js                    -> lib/doc_index.rb
-data/*                                      -> data/*
-src/icons/*.svg                             -> data/icons/hicolor/scalable/actions/*.svg
-```
+The widget-instance gap (92 → 71) is the shortcuts dialog: upstream's 26
+`ShortcutsShortcut` + 4 `ShortcutsGroup` + 1 `ShortcutsSection` + 1
+`ShortcutsWindow` are in `src/Shortcuts.blp`, and in the port they are in
+`data/ui/shortcuts.ui`, which is not under `lib/`. `comm` on the widget
+streams shows exactly those four types as the only upstream types absent from
+`lib/` — all four are present in `data/ui/shortcuts.ui` (27 `<object>`
+declarations, 30 `translatable="yes"` titles, 24 accelerator strings).
 
-Upstream files with **no** port file opposite them:
+The three `action` rows the scan calls missing (`app.about`, `app.quit`,
+`app.shortcuts`) are real and literal in `lib/sidebar_menu.rb` and
+`lib/shortcuts_window.rb`; the scan's action regex does not match a hash value.
+The four `signal` rows it calls missing (`notify::is-online`,
+`notify::search-term`, `notify::webview`, `search-view-selection-changed`) are
+the four GObject properties/signals the port replaces with Ruby callbacks —
+located one by one in `.reports/component-parity.md`.
 
-| Upstream | What it is |
-|---|---|
-| `meson.build`, `meson_options.txt`, `data/meson.build`, `src/meson.build` | the build system — the port is a gem (`biblioteca-rb.gemspec`, `rakelib/biblioteca.rake`) |
-| `build-aux/app.drey.Biblioteca.json`, `.Devel.json`, `build-aux/modules/*.json` | the Flatpak manifests. **Nothing in the port corresponds.** |
-| `src/biblioteca` | shell launcher forcing `LANG=en_US.UTF-8`; `exe/biblioteca` replaces it and deliberately does not force a locale |
-| `Makefile`, `package.json`, `.eslintrc.yaml`, `.husky/pre-commit` | the lint/CI harness; RuboCop + `.gitlab-ci.yml` stand in |
-| `troll/` | submodule, unreadable |
+## Per-unit inventories
 
-## Step 3 — the inventory
+### `src/window.blp` + `src/window.js` → `lib/window.rb` — the application window
 
-### `src/window.blp` + `src/window.js` → `lib/window.rb`
+| Widget | × | CSS | Signals / actions | Notes |
+|---|---:|---|---|---|
+| `Adw.ApplicationWindow` | 1 | `main-window`, `devel` (dev build only) | — | 360×360 request, 1080×768 default |
+| `Adw.Breakpoint` | 2 | — | `apply`, `unapply` | `max-width: 850sp`, `max-width: 450sp` |
+| `Adw.TabOverview` | 1 | — | `create-tab` | `enable-new-tab: true` |
+| `Adw.OverlaySplitView` | 1 | — | `notify::show-sidebar` | `show-sidebar` ↔ `button_sidebar.active` |
+| `Adw.NavigationPage` | 1 | — | `notify::title` | title starts at `_("Documentation")` |
+| `Adw.BreakpointBin` | 1 | — | — | 360×360 request |
+| `Adw.ToolbarView` | 1 | — | — | top bar + bottom bar + content |
+| `Gtk.Box` | 2 | — | — | `#top-toolbars` (named, styled), `box_navigation` (spacing 6, halign start) |
+| `Adw.HeaderBar` | 1 | — | — | — |
+| `Gtk.Stack` | 1 | — | — | pages `title` / `url_bar` |
+| `Adw.WindowTitle` | 1 | — | — | follows `content_page.title` |
+| `Adw.Clamp` | 1 | — | — | holds the URL bar |
+| `Gtk.Entry` | 1 | — | `activate` | `input-purpose: url`, hexpand |
+| `Gtk.ToggleButton` | 1 | `flat` | `toggled` | `sidebar-show-symbolic`, hidden until narrow |
+| `Gtk.Button` | 3 | `flat` ×3 | `win.navigation-back`, `win.navigation-forward`, `win.new-tab` | back / forward / new tab |
+| `Adw.TabBar` | 1 | — | — | bound to the tab view |
+| `Gtk.ProgressBar` | 1 | `osd` | — | load progress |
+| `Gtk.ActionBar` | 1 | — | — | hidden until narrow |
+| `Adw.TabButton` | 1 | — | `clicked` | halign end, hidden until narrow |
+| `Adw.TabView` | 1 | — | `notify::selected-page`, `page-detached` | `shortcuts: ALL_SHORTCUTS` |
 
-Widgets (upstream count, after striking the template root's double count):
-`Adw.ApplicationWindow` 1, `Adw.TabOverview` 1, `Adw.OverlaySplitView` 1,
-`Adw.NavigationPage` 1, `Adw.BreakpointBin` 1, `Adw.ToolbarView` 1,
-`Adw.HeaderBar` 1, `Adw.WindowTitle` 1, `Adw.Clamp` 1, `Adw.TabBar` 1,
-`Adw.TabButton` 1, `Adw.TabView` 1, `Gtk.Box` 2, `Gtk.Button` 3,
-`Gtk.ToggleButton` 1, `Gtk.Entry` 1, `Gtk.ProgressBar` 1, `Gtk.ActionBar` 1,
-`Gtk.StackPage` 2 (a `Gtk.Stack` with two pages).
+Repeaters: one `Adw.TabPage` + `FindOverlay` + `WebView` per tab, driven by
+`win.new-tab`. Conditional: `bottom_toolbar`, `tab_button`, `sidebar_button`
+visible only under a breakpoint; `tab_bar` and `button_new_tab` hidden under
+the narrow-content breakpoint; `box_navigation` is *reparented* between the
+header bar and the bottom bar.
 
-CSS: `main-window` 1, `flat` 4, `osd` 1, `devel` 1 (runtime).
-Actions installed on `win`: `new-tab` (parameter `s`), `close-tab`,
+Actions installed: 16 on the `win` group — `new-tab` (`s`), `close-tab`,
 `navigation-forward`, `navigation-back`, `zoom-in`, `zoom-out`, `reset-zoom`,
 `global-search`, `focus-urlbar`, `toggle-sidebar`, `toggle-overview`,
-`update-buttons`, `find`, `find-prev`, `find-next`, `close-find` — 16.
-Actions targeted from the markup: `win.navigation-back`,
-`win.navigation-forward`, `win.new-tab` (with target).
-Signals: `clicked`, `create-tab`, `notify::selected-page`, `apply`, `unapply`,
-`activate` (url bar), `notify::is-online`, `notify::estimated-load-progress`,
-`load-changed`; plus five `bind_property` / `bind_property_full` bindings
-(title→tab, title→content page, title→window, zoom-level→zoom row, uri→url bar).
-Breakpoints: 2 (`max-width: 850sp`, `max-width: 450sp`), the first also
-carrying `add_setters` on the two sidebar views' `width-request`.
+`update-buttons`, `find`, `find-prev`, `find-next`, `close-find`.
 
-Port: `lib/window.rb` builds all of the above. The scan's three deltas are
-artifacts — `Adw.NavigationPage` 1→2 and `Gtk.ApplicationWindow` 0→1 are
-comment text, `Gtk.Stack` 0→1 is the `Gtk.StackPage` pair spelled as
-`Gtk::Stack` + two `add_named` calls, `Adw.Breakpoint` 2→3 is a comment.
-`win.*` action count is 16 (`ACTIONS` is 15 plus `add_new_tab_action`).
-`notify::is-online` has no counterpart signal — the port passes
-`on_online_changed:` into `WebView.new` (`lib/web_view.rb:150`,
-`lib/window.rb:173`) and fires it from `#update_is_online`. Located.
+### `src/sidebar/Sidebar.blp` + `Sidebar.js` → `lib/sidebar.rb` — the left pane
 
-### `src/FindOverlay.blp` + `.js` → `lib/find_overlay.rb`
+| Widget | × | CSS | Signals | Notes |
+|---|---:|---|---|---|
+| `Adw.NavigationPage` | 1 | — | — | title "Biblioteca", untranslated upstream |
+| `Adw.ToolbarView` | 1 | — | — | two top bars |
+| `Adw.HeaderBar` | 1 | — | — | — |
+| `Gtk.MenuButton` | 1 | — | — | `open-menu-symbolic`, `primary: true`, tooltip `_("Main Menu")` |
+| `Gtk.Box` | 1 | `toolbar` | — | holds the search entry |
+| `Gtk.SearchEntry` | 1 | — | `search-changed` | `search-delay: 200`, placeholder `_("Search Biblioteca")` |
+| `Gtk.Stack` | 1 | — | — | `transition-type: none`; 3 pages |
+| `Adw.StatusPage` | 1 | `compact` | — | **the app's only empty state**: `_("No Results Found")` / `_("Try a different search term")` / `edit-find-symbolic` |
 
-`Gtk.Overlay` 1, `Gtk.SearchBar` 1, `Gtk.Box` 4, `Gtk.Image` 1, `Gtk.Text` 1,
-`Gtk.Label` 1, `Gtk.Button` 3. CSS `searchbar`, `linked`, `circular`.
-`css-name: "entry"` on the inner box. Actions targeted:
-`win.find-prev`, `win.find-next`, `win.close-find`. Signals: `found-text`,
-`failed-to-find-text`, `notify::text`, plus `connect_entry`.
-Port matches, with the `css-name: entry` box built through a 20-line
-`Gtk::Builder` string because `css-name` is construct-only (`FINDINGS.md` #3).
+### `menu menu_app` → `lib/sidebar_menu.rb` — the main menu
 
-### `src/WebView.blp` + `.js` → `lib/web_view.rb`
+Four sections, in order: `custom: "themeswitcher"` → `custom: "zoom_buttons"`
+→ a `_("Bookmarks")` submenu of 8 items → `_("Keyboard Shortcuts")` +
+`_("About Biblioteca")`. 11 menu items, 2 custom slots (each a component
+boundary filled by `popover.add_child(widget, id)`). Verified against the live
+`Gio::Menu` this round: 4 sections, 8 bookmark items each carrying
+`action="win.new-tab"` and its own `target`, both custom ids present.
 
-`WebKit.WebView` 1 with `WebKit.Settings`
-(`enable-back-forward-navigation-gestures`, `enable-developer-extras: false`,
-`enable-smooth-scrolling`). One `UserScript`, two `UserStyleSheet`s, 11
-`ContextMenuAction`s pruned, `notify::uri`, `decide-policy`, `context-menu`,
-`changed` on the back/forward list, `win.new-tab` and `win.update-buttons`
-fired. Port matches 1:1; the nine `WebKit.*` enum rows the scan reports as
-missing are Ruby symbols (`:all_frames`, `:user`, `:end`, `:navigation_action`)
-and a symbol array of the same 11 context-menu actions.
+### `src/FindOverlay.blp` + `FindOverlay.js` → `lib/find_overlay.rb`
 
-### `src/sidebar/Sidebar.blp` + `.js` → `lib/sidebar.rb` + `lib/sidebar_menu.rb`
+| Widget | × | CSS | Signals / actions | Notes |
+|---|---:|---|---|---|
+| `Gtk.Overlay` | 1 | — | — | child is the web view |
+| `Gtk.Box` | 4 | `linked` (nav box only) | — | toolbar (margins 12/24, valign start, halign end), content (spacing 6), the `css-name: entry` box (220 wide), nav |
+| `Gtk.SearchBar` | 1 | `searchbar` | — | `connect_entry(search_text)` |
+| `Gtk.Image` | 1 | — | — | `edit-find-symbolic` |
+| `Gtk.Text` | 1 | — | `notify::text` | 10 chars / 10 max |
+| `Gtk.Label` | 1 | — | — | match counter, `xalign: 1`, `opacity: 0.5`; **its own empty state** is the blank label |
+| `Gtk.Button` | 3 | `circular` (close only) | `win.find-prev`, `win.find-next`, `win.close-find` | — |
 
-`Adw.NavigationPage` 1, `Adw.ToolbarView` 1, `Adw.HeaderBar` 1,
-`Gtk.MenuButton` 1 (`primary: true`), `Gtk.Box` 1 (`toolbar`),
-`Gtk.SearchEntry` 1 (`search-delay: 200`), `Gtk.Stack` 1
-(`transition-type: none`), `Adw.StatusPage` 1 (`compact`).
-`menu menu_app`: 4 sections — a `custom: "themeswitcher"` item, a
-`custom: "zoom_buttons"` item, a `Bookmarks` submenu of 8 items each firing
-`win.new-tab` with a target, and `app.shortcuts` + `app.about`.
-Port matches. The scan's `app.about` 1→0, `app.shortcuts` 1→0 and
-`win.new-tab` 8→0 are artifacts of `lib/sidebar_menu.rb:72` interpolating the
-target into `"win.new-tab('#{uri}')"`; the literals are there on reading.
+### `src/sidebar/BrowseView.blp` + `BrowseView.js` → `lib/browse_view.rb`
 
-### `src/sidebar/BrowseView.blp` + `.js` → `lib/browse_view.rb`
+`Gtk.ScrolledWindow` (vexpand, 400 wide) › `Gtk.ListView`
+(`navigation-sidebar`, `enable-rubberband: false`, `activate`) with a row
+template of `Gtk.TreeExpander` › `Gtk.Inscription` (hexpand, valign center,
+`nat-chars: 10`, `ellipsize_end`). One `Gtk.GestureClick` (`button: 0`,
+`pressed`) — middle click opens the row in a new tab. Repeater: one row per
+`DocumentationPage` in a `Gtk.TreeListModel` over nested `Gio.ListStore`s.
 
-`Gtk.ScrolledWindow` 1 (`width-request: 400`), `Gtk.ListView` 1
-(`navigation-sidebar`, `enable-rubberband: false`), a row factory producing
-`Gtk.TreeExpander` + `Gtk.Inscription` (`nat-chars: 10`,
-`ellipsize_end`). Model chain `Gio.ListStore` → `Gtk.TreeListModel`
-(passthrough false, autoexpand false) → `Gtk.SingleSelection`
-(`can_unselect`). Controller `Gtk.GestureClick` (`button: 0`) → `pressed`.
-Signals `activate`, `selection-changed`, `value-changed` (vadjustment),
-`notify::uri` (on the web view), `notify::webview` (own property).
-Port matches; `Gtk.BuilderListItemFactory` → `Gtk.SignalListItemFactory`
-(`setup`/`bind`) is the documented correspondence for a `.blp`-less port.
+### `src/sidebar/SearchView.blp` + `SearchView.js` → `lib/search_view.rb`
 
-### `src/sidebar/SearchView.blp` + `.js` → `lib/search_view.rb`
+Same scroller/list-view shell; row template is `Gtk.Box` › `Gtk.Inscription`
+(`nat-chars: 25`) + `Gtk.Button` (`pill`, `small`, `doc-tag`, insensitive —
+the symbol-kind pill). One `Gtk.GestureClick` (`button: 0`). Repeater: one row
+per ranked result.
 
-`Gtk.ScrolledWindow` 1, `Gtk.ListView` 1 (`navigation-sidebar`), a row factory
-producing `Gtk.Box` + `Gtk.Inscription` (`nat-chars: 25`) + an insensitive
-`Gtk.Button` carrying `pill small doc-tag`. Controller `Gtk.GestureClick`
-(`button: 0`). Signals `pressed`, `selection-changed`,
-`notify::search-term`, custom signal `search-view-selection-changed`.
-Port matches on widgets, CSS and the gesture. The model chain is **replaced**:
-`Gtk.CustomFilter` + `Gtk.FilterListModel` + `Gtk.CustomSorter` +
-`Gtk.SortListModel` become a Ruby `filter_map`/`sort_by` spliced into a plain
-`Gio::ListStore` (`lib/search_view.rb#rank`, `#refresh_results`), because
-`GtkCustomSortFunc` reaches Ruby as a pair of addresses (`FINDINGS.md` #1).
-That is a data-plumbing correspondence; the behaviour is located.
-`notify::search-term` → the `search_term=` setter; the custom signal → the
-`on_selected:` callback (`lib/sidebar.rb:49`). Located.
+### `src/sidebar/ZoomButtons.blp` → `lib/zoom_buttons.rb`
 
-### `src/sidebar/ZoomButtons.blp` + `.js` → `lib/zoom_buttons.rb`
+`Gtk.Box` (homogeneous) › `Gtk.Button` `zoom-out-symbolic` (`flat`,
+`circular`, `win.zoom-out`, tooltip `_("Zoom out")`) + `Gtk.Label` "100%" +
+`Gtk.Button` `zoom-in-symbolic` (`flat`, `circular`, `win.zoom-in`, tooltip
+`_("Zoom in")`).
 
-`Gtk.Box` 1 (`homogeneous`), `Gtk.Button` 2 (`flat circular` each),
-`Gtk.Label` 1 (`"100%"`). `win.zoom-out`, `win.zoom-in`. `zoom-level`
-property bound to the label. Port matches; the property is a plain
-accessor driven from `lib/window.rb#on_zoom_changed`.
+### `src/Shortcuts.blp` → `data/ui/shortcuts.ui`
 
-### `src/Shortcuts.blp` + `.js` → `data/ui/shortcuts.ui` + `lib/shortcuts_window.rb`
+`Gtk.ShortcutsWindow` (`modal`, `hide-on-close`) › 1 `ShortcutsSection` › 4
+`ShortcutsGroup` (`_("Tabs")` 12, `_("Navigation")` 9, `_("Zoom")` 3,
+`_("General")` 2) › 26 `ShortcutsShortcut`, 2 of them gesture rows
+(`gesture_two_finger_swipe_left/right`). Counted in the port's `.ui`: 30
+translatable titles, 24 accelerator strings, 2 gesture rows.
 
-`Gtk.ShortcutsWindow` 1 (`modal`, `hide-on-close`), `Gtk.ShortcutsSection` 1,
-`Gtk.ShortcutsGroup` 4 (Tabs, Navigation, Zoom, General),
-`Gtk.ShortcutsShortcut` 26 — 24 with an accelerator, 2 with
-`shortcut-type: gesture_two_finger_swipe_*`. Port: identical counts, and the
-24 accelerator strings are byte-identical (diffed, including upstream's
-`<Ctrl>Home` typo at `src/Shortcuts.blp:36`, kept on purpose —
-`FINDINGS.md` #8). `app.shortcuts` + 15 `set_accels_for_action` calls land in
-`lib/shortcuts_window.rb#accels`, which also picks up `app.quit` from
-`src/actions.js`.
+### `src/WebView.blp` + `WebView.js` → `lib/web_view.rb`
 
-### `src/application.js` + `actions.js` + `about.js` + `bin.js` + `main.js` + `init.js`
+`WebKit.WebView` (vexpand) with a `WebKit.Settings` carrying three flags; two
+`WebKit.UserStyleSheet`s and one `WebKit.UserScript` (all `ALL_FRAMES`,
+`USER` / injection `END`); 11 pruned `WebKit.ContextMenuAction`s; signals
+`notify::uri`, `decide-policy`, `context-menu`, and `changed` on the
+back/forward list.
 
-`Adw.Application` (`resource_base_path`), `set_option_context_description`,
-`Adw.StyleManager` + `changed::color-scheme`, `activate` building one window,
-app actions `quit` / `about` / `settings.create_action("color-scheme")`,
-`<Control>Q`, `Adw.AboutDialog` with 8 fields + `add_credit_section`,
-`GLib.set_application_name`, `pkg.initGettext`, the Flatpak guard, and
-`Gio._promisify(Gtk.UriLauncher.prototype, "launch", ...)`.
+### Application unit → `lib/biblioteca/application.rb` + `lib/package.rb`
 
-Port: `lib/biblioteca/application.rb` + `lib/package.rb` +
-`lib/about_dialog.rb` + `lib/settings.rb`. Two upstream items have **no
-located counterpart** and are carried to `component-parity.md` as gaps:
+Actions: `app.quit`, `app.about`, `app.color-scheme` (stateful, from the
+settings), `app.shortcuts` (installed by the shortcuts unit). Option-context
+description. Style manager follows `color-scheme`. **One error state**:
+upstream's `src/bin.js:27-32` refuses to start outside Flatpak — see
+`.reports/component-parity.md` gap 1.
 
-* `src/bin.js:27-32`, the Flatpak-required guard and its error message;
-* `src/init.js:8`, `Gtk.UriLauncher`.
+## Stylesheet side
+
+`src/style.css` defines 4 rule groups: `#top-toolbars` (dark + light media
+queries), `.searchbar > * > *`, `.searchbar`, `button.pill.small`. All four are
+in `lib/style.rb`'s heredoc verbatim. `.doc-tag` is **applied and never
+defined** — dead on both sides, carried deliberately.
+
+troll's `ThemeSelector.css` is the fifth stylesheet; it lives in
+`lib/theme_selector.rb` and cannot be diffed (Gap CI-1).
+
+## Gaps
+
+| # | Gap | Fix |
+|---|---|---|
+| CI-1 | **Two units cannot be identified from any ref in this repository.** `troll` is a gitlink on `origin/main` (`.gitmodules` → `https://github.com/sonnyp/troll.git`) and the submodule is not checked out. `troll/src/widgets/ThemeSelector.{js,blp,css}` and `troll/src/util.js` `persistWindowState` therefore produce **no upstream rows at all**: the inventories above for units 6 and 12 are reconstructed from the port's own comments, which is the wrong direction. The skill names this case explicitly ("Widgets from a submodule or a vendored library… If the submodule is not checked out the scan cannot see it"). | Pin the troll sha, vendor the three `ThemeSelector.*` files and `util.js` under `vendor/troll/` on the `ruby` branch, scan them, and union the rows into `lib/theme_selector.rb` and `lib/window_state.rb` before the next parity round |

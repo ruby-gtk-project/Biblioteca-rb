@@ -2,35 +2,43 @@
 
 | | |
 |---|---|
-| Upstream | `origin/main` @ `9e4ededb8dff1b537de09d25ce2e55d1997c43d3` (`9e4eded`) |
-| Port | `ruby` @ `d63ee497e572c2d5ef7ab7790ef119be3371f9ed` (`d63ee49`) |
+| Upstream | `origin/main` @ `9e4eded` |
+| Port | `ruby` @ `243ddbe` |
 | Upstream messages (distinct `(msgctxt, msgid)`) | **64** |
 | Produced by the port | **64 / 64** |
 | Gaps in the key set | **0** |
-| Extra keys in the port | 3 |
-| Upstream occurrences | 69 call sites |
-| Port occurrences | 72 call sites |
+| Extra keys in the port | 3 (troll's three theme labels) |
 | Languages upstream | **0** |
 | Languages in the port | **0** |
 | Domain | `org.rubygtkproject.Biblioteca` |
-| `domain_source` | `data/app.gschema.xml` `gettext-domain` + `data/app.metainfo.xml` `<translation type="gettext">`, both the app id — upstream's `pkg.initGettext()` derivation |
 | Catalogue template | `po/org.rubygtkproject.Biblioteca.pot` — 64 messages |
+| Gaps | **2** (both in the machinery, none in the key set) |
 | Audited | 2026-11-02 |
 
-## The headline: the key set is clean
+## The key set is clean — every msgid survived
 
-`comm -23` over the two censuses is **empty**. All 64 messages upstream marks
-are produced by the port with byte-identical msgids — including the ones that
-are easy to retype wrong: `Switch to tabs 1⋯10` (U+22EF, not three periods),
-`Move current tab at the start`, `Addition Documentation`,
-`Try a different search term`, `Show Previous Result`. Nothing was reworded,
-nothing was re-cased, nothing was interpolated. That is the thing this skill
-exists to check and the port passes it.
+Re-run this round. `comm -23` over the two censuses is **empty**:
 
-Per-message occurrence counts also match where it matters: `Zoom in`,
-`Zoom out`, `Go back to the previous page` and `Go forward to the next page`
-are each 2 → 2, so the shortcuts dialog and the widget both still reach the
-same key.
+```sh
+# upstream: _("…") across src/*.blp and src/*.js, plus data/app.desktop
+#           Comment= and the translatable strings in data/app.metainfo.xml
+# port:     msgid lines in po/org.rubygtkproject.Biblioteca.pot
+comm -23 up_msgids.txt port_msgids.txt   # → empty
+```
+
+All 52 `_()` strings in `src/` plus the 12 from `data/app.desktop` and
+`data/app.metainfo.xml` are produced with byte-identical msgids, including the
+ones easy to retype wrong: `Switch to tabs 1⋯10` (U+22EF, not three periods),
+`Move current tab at the start`, `Try a different search term`,
+`Show Previous Result`, `Addition Documentation`. Nothing was reworded,
+re-cased or interpolated.
+
+The 12 extra port msgids are all accounted for: 9 come from
+`data/app.metainfo.xml` and `data/app.desktop`, which upstream has but does not
+list in a `po/` of its own (it has none), and 3 — `Follow system style`,
+`Light style`, `Dark style` — come from troll's `ThemeSelector.blp`, which is
+a submodule file and so produces no upstream rows (see
+`.reports/component-identification.md` gap CI-1).
 
 ### Where the strings are marked
 
@@ -47,74 +55,31 @@ same key.
 | `lib/zoom_buttons.rb` | 2 | `_()` | `src/sidebar/ZoomButtons.blp` |
 | `lib/about_dialog.rb` | 1 | `_()` | `src/about.js:23` |
 
-## Languages: 0 of 0, and that is the real parity figure
+Occurrence counts match where it matters: `Zoom in`, `Zoom out`, `Go back to
+the previous page` and `Go forward to the next page` are 2 → 2 each, so the
+shortcuts dialog and the widget still reach the same key.
 
-Upstream ships **no `po/` directory**, no `LINGUAS`, no `.po` files, and calls
-no `i18n` meson module. `src/biblioteca:5` says it outright:
+Every translatable-string carrier in the port is listed in `po/POTFILES.in`,
+and so is every `lib/*.rb` that currently has none — so a string added to any
+of them is extracted without anybody editing the list.
 
-> `# We do not support translations but the AboutWindow is translated by default`
-> `# force app in English see .../pull/40#issuecomment-1811380922`
-> `LANG=en_US.UTF-8`
+## Languages: 0 of 0, and that is the real figure
 
-There is no donated catalogue to inherit and none to destroy. Language parity
-is 0 / 0 and met. The port goes further than upstream — it ships a `po/`
-directory, a `POTFILES.in`, an extractor and a 64-message `.pot` — and that is
-additive work, not parity work.
+Upstream ships **no `po/` directory**, no `LINGUAS`, no `.po` file, and calls
+no `i18n` meson module. `src/biblioteca` is a wrapper that sets
+`LANG=en_US.UTF-8` precisely because there is no catalogue to load. So there
+are no translations to lose, and none were lost.
 
-The port is also right not to force `LANG`. Upstream forces English because
-`Adw.AboutDialog` would otherwise show translated chrome around untranslated
-app strings; the port marks its strings, so the reason is gone.
+The port goes one step further than upstream — it marks its strings and ships
+a `.pot` — and stops one step short of a working catalogue. Both gaps below
+are about that step, not about any msgid.
 
 ## Gaps
 
-| # | Gap | Where | What is owed |
+| # | Gap | Evidence | Fix |
 |---|---|---|---|
-| 1 | One marked string in `data/app.metainfo.xml` never reaches the catalogue: `<developer><name>Akshay Warrier</name></developer>`. AppStream treats `<name>` as translatable; `po/extract.rb`'s `METAINFO_STANDALONE` matches only `<summary>` and `<caption>`, and `METAINFO_PARAGRAPH` only `<p>`/`<li>` under `<description>` | `po/extract.rb:71-73` | Either extract it, or state in `po/extract.rb` that it is excluded and why. The census finds it in the source and not in the `.pot`; a reader cannot currently tell whether that is a decision or an oversight |
-| 2 | The port has 67 source keys and a 64-message `.pot`, and nothing checks the two against each other | `rakelib/biblioteca.rake` `gettext:pot` | A check that fails when `po/*.pot` and the source census disagree. Gap 1 is invisible today precisely because nothing compares them |
-| 3 | `rake gettext:mo` globs `po/*.po` and there are none, so it is a no-op that exits 0 | `rakelib/biblioteca.rake:155-170` | Nothing for parity — upstream ships 0 languages too. Recorded because a task that silently does nothing reads as a task that worked |
+| TP-1 | **Nothing guards the `.pot` against drift, and it has already drifted.** `rake gettext:pot` re-ran this round regenerates the same 64 messages, but three source references move: `lib/theme_selector.rb:53-55` → `:57-59`. The committed template was generated before an edit to that file and nobody noticed, because no check compares the two | `diff` of the regenerated `.pot` against the committed one, ignoring `POT-Creation-Date`, is three `#:` lines | add `rake gettext:pot && git diff --exit-code po/` to the default task (see `.reports/test-parity.md` T-1) so a string added, moved or reworded without regenerating the template fails the build. Upstream's own `Makefile:16` has the gettext half of its lint commented out; the port should not inherit that |
+| TP-2 | **The gettext wiring has never loaded a message, and cannot.** `Package.init_gettext` calls `GLib::GetText.bindtextdomain(DOMAIN, locale_dir)` and `GetText.bindtextdomain(DOMAIN, path: locale_dir)` where `locale_dir` is `lib/../locale` — **a directory that does not exist** (`ls -d locale` → `No such file or directory`). `po/` holds no `.po`, so `rake gettext:mo` compiles nothing and never creates it. Every `_()` in the port therefore returns its msgid by the untranslated path only, and the two `bindtextdomain` calls — including the libintl one that `Gtk::Builder` translates `data/ui/shortcuts.ui` through, and that GLib reads for the schema and the `.desktop` — are asserted by nothing | the drive run checks `Package::DOMAIN` and `Package.locale_dir` as *strings* (`.reports/drive.md`, `lib/package.rb` row); no check resolves a translated string | commit one real catalogue — even `po/en_GB.po` with a single deliberately different message — run `rake gettext:mo`, and add a check that `_()` returns the translated form under that locale and that the `.ui` file's titles come back translated through the builder. That is the only way either `bindtextdomain` call is ever proven to work |
 
-## Extra keys in the port
-
-| Key | Where | Status |
-|---|---|---|
-| `Follow system style` | `lib/theme_selector.rb:53` | troll's `ThemeSelector.blp`. **Not** invented by the port |
-| `Light style` | `lib/theme_selector.rb:54` | same |
-| `Dark style` | `lib/theme_selector.rb:55` | same |
-
-These three are the reason the port's key set is 67 and not 64. They are
-upstream's strings, from `troll/src/widgets/ThemeSelector.blp` — but `troll` is
-a **git submodule**, a gitlink on `origin/main` rather than a tree, so the
-census of the upstream side cannot see them and reports them as extras. They
-are almost certainly byte-identical to troll's (the port's comment says the
-file was ported from it), and **that cannot be confirmed from the pinned ref.**
-Confirming it means pinning troll's sha and censusing that tree too; until then
-three of the port's 67 msgids are unverified, and a reworded one here would
-look exactly like this.
-
-## Occurrence counts, read as a finding and not a pass condition
-
-69 upstream call sites over 64 keys; 72 port call sites over 67 keys. The
-3-site difference is the three troll keys, one site each. Every shared key has
-the same number of call sites on both sides, so there is no "the key is present
-but one of its five buttons lost it" case hiding behind a clean key diff —
-which is the failure this column exists to catch.
-
-## Numbers, so they reconcile
-
-```
-msgid-census.sh up    -> 69 rows,  cut -f1,2 | sort -u -> 64 keys
-msgid-census.sh port  -> 136 rows, of which 64 are the .pot itself
-                      -> 72 source rows, sort -u       -> 67 keys
-comm -23 up.keys port.keys -> 0      (no upstream message missing)
-comm -13 up.keys port.keys -> 3      (the troll strings)
-comm -12 up.keys port.keys -> 64     (ported)
-ls up/po/*.po  -> no such directory  -> 0 languages, 0 translated strings
-ls port/po/*.po -> none              -> 0 languages, 0 translated strings
-```
-
-Note the census's two false positives, which appear identically on **both**
-sides and so cancel in the diff: `Biblioteca` (`Name=`) and
-`GTK;libadwaita;doc;documentation;api;manual;devhelp;` (`Keywords=`) in
-`data/app.desktop`. Both carry upstream's `# TRANSLATORS: Don't translate`
-comment, which the scanner does not read, and `po/extract.rb`'s
-`DESKTOP_KEYS = %w[Comment]` correctly excludes them. Not gaps.
+Neither gap changes the headline: **64 of 64 msgids survived, byte for byte.**
+What is unproven is that a catalogue, once written, would be found.
