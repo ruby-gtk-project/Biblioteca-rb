@@ -3,13 +3,24 @@
 | | |
 |---|---|
 | Upstream | `origin/main` @ `9e4eded` |
-| Port | `ruby` @ `243ddbe` |
+| Port | `ruby` @ `ced6a5b` |
 | Excuse markers in `lib/`, `exe/`, `test/`, `spec/`, `.reports/`, `PORTING.md` | **0** |
 | False greens | **1** |
 | Stale greens / withdrawn claims | **4** |
 | Green claims resting on something never executed | **2** |
 | Narrow checks presented as coverage | **2** |
-| Audited | 2026-11-02 |
+| New this round: load-bearing "design decision" framing | **1** |
+| New this round: a stale resume document presenting a false project state | **1** |
+| Audited | 2026-11-06 |
+
+Round 4 re-ran every check F-1 through F-4 cite rather than carrying them
+forward on trust: `desktop-file-validate`, `appstreamcli`, `appstream-util`
+and `flatpak-builder-lint` are confirmed still **MISSING** from the dev shell
+(F-1 unchanged), `rake data:validate` still runs and prints nothing, the four
+withdrawn claims in F-2 are confirmed still withdrawn (`394 of 394`,
+`36 examples, 0 failures`, `rubocop_gradual:check` still absent from `rake
+-T`), and `grep -n accessible test/*.rb` is still empty (F-3 unchanged). Two
+new findings follow, F-6 and F-7.
 
 ## The grep is clean
 
@@ -122,9 +133,61 @@ dress up, and this round leaves them open rather than closing them on paper:
   faithfully reproduced, asserted as the behaviour that *exists*, and flagged
   at both call sites rather than passed off as working.
 
+## F-6 — A still-open gap reframed as a settled decision
+
+`FINDINGS.md` #10 (added in `ced6a5b`, the commit this round reviews) writes,
+about the Flatpak-required startup refusal that gap 1 of
+`.reports/component-parity.md` keeps open:
+
+> `lib/package.rb`'s class comment already explains why this port does not
+> replicate that guard … **That is a documented design decision from before
+> this round**, not a gap this round's gem-wiring closes.
+
+This is exactly the construction this skill exists to catch, written by the
+same commit that could have closed the gap and chose to wire two unrelated
+gems instead. "Documented design decision" is a sentence a reader mistakes
+for authority. It has none: upstream ships the refusal
+(`src/bin.js:27-32`, `exit(1)` with a message), so the port not shipping it is
+a missing error state, not a decision anyone but the port was entitled to
+make. The gap itself is not hidden — `.reports/component-parity.md` gap 1 and
+`PORTING.md`'s "Not started" table both still list it as open, and this
+report's own header still counts 7 open gaps including it — so this is not a
+false green. It is the load-bearing-note failure in its purest form: the
+excuse and the gap sit in the same file, four lines apart, and the excuse is
+still wrong for a reason that has nothing to do with whether the gap is
+listed. Rewrite `FINDINGS.md` #10's second paragraph to state plainly that
+the Flatpak startup refusal is not implemented and nothing in this commit
+implements it, and drop "documented design decision" entirely — `lib/
+package.rb`'s own comment, cited approvingly here, already carries the same
+construction and should be checked next.
+
+## F-7 — `PORTING.md`'s header describes a port that no longer exists
+
+`PORTING.md:1-13` states "Last audit 2026-11-02, at port commit `d63ee49`" and
+"**Nothing in this port has been run**: the `gtk4`, `adwaita`, `webkit-gtk`
+and `gettext` gems are not installed in this checkout … Every claim below is a
+claim about source text." `d63ee49` is two "Parity reports" commits and a
+"Round 3" commit behind `ced6a5b`; the drive run, the three test drivers and
+RSpec have all executed successfully since, independently reconfirmed this
+round (above). `PORTING.md` is named in the task's own resume-point role —
+"the resume point. It records what exists" — so an agent picking up this port
+from the one document designed for that purpose reads a false "nothing runs"
+header before reaching anything true. This is not a comment excusing a gap;
+it is the accountability failure one level up — a whole document's framing
+left stale long enough to misstate the project's basic state (built vs.
+unbuilt, run vs. unrun) to its next reader. `PORTING.md`'s "Open gaps" section
+also still cites a per-report gap sum ("15") against a different total ("21")
+without reconciling them, which is the same failure in miniature. Fix:
+regenerate `PORTING.md`'s header and "Open gaps" section from this round's
+five reports before the next commit touches it; do not let a fourth round
+inherit a header that still says "nothing runs."
+
 ## Verdict
 
-No gap in this port is being excused in a comment. One is being excused by a
-shell `if`, four were being understated by reports that had gone stale, two
-rest on mechanisms no check can execute, and two checks read a Ruby constant
-where they should read a GTK object. `clean: false`.
+No gap in this port is being excused in a comment inside `lib/` or `exe/`. One
+is being excused by a shell `if` (F-1), four were being understated by reports
+that had gone stale (F-2), two rest on mechanisms no check can execute (F-3),
+two checks read a Ruby constant where they should read a GTK object (F-4), one
+still-open gap is reframed as a settled decision four lines from the gap
+itself (F-6), and the port's own resume document tells the next reader the
+port has never been run (F-7). `clean: false`.

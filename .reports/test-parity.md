@@ -3,13 +3,27 @@
 | | |
 |---|---|
 | Upstream | `origin/main` @ `9e4eded` |
-| Port | `ruby` @ `243ddbe` |
+| Port | `ruby` @ `ced6a5b` |
 | Upstream checks | **7** |
 | Ported **and executed** | **2 / 7** |
 | Ported but never executed | **2 / 7** |
 | Gaps | **3 / 7** |
 | Port's own checks, executed this round | 36 specs + 394 drive checks + 55 driver steps, **0 failures** |
-| Audited | 2026-11-02 |
+| Audited | 2026-11-06 |
+
+## Round 4 — re-run independently, not carried forward on trust
+
+Every command in the table immediately below was re-run this round from
+`ced6a5b`, the one commit since the last audit (it wires two unused gems,
+`ashpd`/`libspelling`, per `FINDINGS.md` #10 — no test, driver or spec file
+changed, and the counts are unchanged): `394 of 394` drive checks, `36
+examples, 0 failures` under RSpec, `31 steps / 2 skipped` and `24 steps / 0
+failures` on the two secondary drivers, `32 files inspected, no offenses
+detected` under `rubocop`, and `rake data:validate` confirmed to still run
+and validate nothing — `desktop-file-validate`, `appstreamcli`,
+`appstream-util` and `flatpak-builder-lint` are all still **MISSING** from
+the dev shell. Gaps 6 and 7 (the two `flatpak-builder-lint` checks) and T-1
+through T-3 are unchanged and still open.
 
 ## Does the suite run? Yes — this round, all of it
 

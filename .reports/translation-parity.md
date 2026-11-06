@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Upstream | `origin/main` @ `9e4eded` |
-| Port | `ruby` @ `243ddbe` |
+| Port | `ruby` @ `ced6a5b` |
 | Upstream messages (distinct `(msgctxt, msgid)`) | **64** |
 | Produced by the port | **64 / 64** |
 | Gaps in the key set | **0** |
@@ -13,7 +13,17 @@
 | Domain | `org.rubygtkproject.Biblioteca` |
 | Catalogue template | `po/org.rubygtkproject.Biblioteca.pot` — 64 messages |
 | Gaps | **2** (both in the machinery, none in the key set) |
-| Audited | 2026-11-02 |
+| Audited | 2026-11-06 |
+
+## Round 4 — re-confirmed
+
+Re-checked this round rather than carried forward: `po/
+org.rubygtkproject.Biblioteca.pot` still has 64 real `msgid` lines (65
+`^msgid "` matches including the empty header), `locale/` still does not
+exist, and the one commit since the last audit (`ced6a5b`, wiring `ashpd` and
+`libspelling`) touches no `lib/*.rb`, no `.blp`-equivalent widget file and no
+`po/` file, so it adds no string and closes nothing here. TP-1 and TP-2 are
+unchanged and still open.
 
 ## The key set is clean — every msgid survived
 

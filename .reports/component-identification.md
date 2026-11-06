@@ -3,18 +3,24 @@
 | | |
 |---|---|
 | Upstream | `origin/main` @ `9e4eded` |
-| Port | `ruby` @ `243ddbe` |
+| Port | `ruby` @ `ced6a5b` |
 | Upstream units | 13 (11 widget classes + the application class + the standalone shortcuts definition) |
 | Port units | 19 `lib/*.rb` + `data/ui/shortcuts.ui` |
 | Units identifiable from the pinned ref | 11 of 13 |
 | **Units that cannot be identified at all** | **2** — see Gap CI-1 |
 | Scans | `scripts/component-scan.sh` on `src/` and on `lib/` |
-| Audited | 2026-11-02 |
+| Audited | 2026-11-06 |
 
 Upstream is a GJS app with a declarative half, so Step 1 of the skill applies:
 the seven `.blp` files and the one `menu` block in them *are* the inventory,
 and the `.js` beside each one carries the callbacks. Rows from the two halves
 are unioned per port file before anything is compared.
+
+**Round 4.** Re-run against `ced6a5b`, the one commit since the last audit.
+`git show ced6a5b --stat` touches `FINDINGS.md`, the gemspec, the flake and
+the lockfiles only — no `lib/*.rb`, no `data/ui/*`, no upstream file — so the
+unit map, the 19 port units and the "2 units unidentifiable" figure (CI-1,
+the `troll` submodule) are unchanged and re-confirmed rather than re-derived.
 
 ## Unit map
 

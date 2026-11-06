@@ -3,13 +3,13 @@
 | | |
 |---|---|
 | Upstream | `origin/main` @ `9e4eded` |
-| Port | `ruby` @ `243ddbe` |
+| Port | `ruby` @ `ced6a5b` |
 | Inventory | `.reports/component-identification.md` |
 | Runtime gate | `drive_ok=true`, **394 of 394 checks**, 19 components, re-run this round |
 | Gaps | **7 open** |
 | Divergences recorded, not gaps | 5 |
 | Units unverifiable against upstream | 2 |
-| Audited | 2026-11-02 |
+| Audited | 2026-11-06 |
 
 **What changed since the last round.** The previous edition of this file said
 "Nothing below has been exercised in a running GTK process", and that was true
@@ -26,6 +26,42 @@ page, menu item, keyboard shortcut, preference, action, empty state and error
 state was enumerated and located except the gaps below. The text axis holds
 byte for byte: all 64 upstream msgids are produced
 (`.reports/translation-parity.md`).
+
+## Round 4 — independently re-verified, one wiring commit since the last audit
+
+Re-run from a clean invocation this round, not copied from the previous
+report: `nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' ruby
+test/drive_biblioteca.rb` → `394 of 394 checks passed` / `DRIVE OK`;
+`test/drive_app.rb` → `31 steps, 2 skipped, 0 failures`; `test/drive_sidebar.rb`
+→ `24 steps, 0 failures`; the RSpec invocation the dev shell banner prints →
+`36 examples, 0 failures`; `rubocop lib exe spec test po` → `32 files
+inspected, no offenses detected`. The runtime gate holds at `ced6a5b`, same as
+the committed `drive_ok=true` figure for this round (394 checks, 0 failed, 18
+components reported by the harness — one lower than the 19 this report
+counts because the harness's component tally and this report's component
+tally are not drawn from the same list; see
+`.reports/component-identification.md` for the 19).
+
+One commit landed between the last audit and this one
+(`ced6a5b`, "Wire in ashpd and libspelling"). It adds two gem dependencies and
+flake wiring; it adds no widget, no signal, no action and no translatable
+string, so nothing above moves. `FINDINGS.md` #10, added by that commit,
+documents that neither gem has a call site on `origin/main` — confirmed by
+`grep -rn 'UriLauncher\|Xdp\|Spelling\|libspelling' $(git ls-tree -r
+--name-only origin/main)` returning only the one `Xdp.Portal` line in
+`src/bin.js` that `lib/package.rb` already declines to replicate (gap 1,
+below) and the `libspelling.json` Flatpak module entry, which is packaging,
+not a GI import. **This is not a new component and not a new gap** — wiring
+an unused gem is neither — but the commit message and `FINDINGS.md` #10 frame
+the *existing*, still-open gap 1 (the missing Flatpak-refusal guard) as a
+"documented design decision from before this round". `.reports/
+accountability-ensurance.md` F-6 (new this round) covers why that framing is
+itself a finding, independent of gap 1 staying open on this ledger.
+
+No other change in `ced6a5b` touches a row below; the 7 open gaps, the 5
+divergences and the 2 unverifiable units carry forward unchanged from the
+previous round and were re-confirmed by re-reading each cited line at
+`ced6a5b` rather than assumed stable.
 
 ---
 
