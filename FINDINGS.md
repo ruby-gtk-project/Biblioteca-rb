@@ -279,3 +279,48 @@ the port.
 
 **Reported upstream:** no — a GTK defect in a widget GTK has already
 deprecated (see #7). Not filed.
+
+---
+
+## 10. `ashpd` and `libspelling` wired in, used by neither upstream nor the port
+
+Both gems are declared in `biblioteca-rb.gemspec` and `nix/Gemfile`, and both
+load: `require "ashpd"; Ashpd.constants` returns 7 constants
+(`Account`, `Camera`, `OpenUri`, `Screenshot`, `Settings`, `Trash`, `VERSION`)
+and `require "libspelling"; Spelling.constants` returns 8
+(`Checker`, `Dictionary`, `Error`, `LOG_DOMAIN`, `Language`, `Loader`,
+`Provider`, `TextBufferAdapter`). `flake.nix` carries `libspelling` in
+`gtkStack` for its typelib, and rewrites `ashpd`'s gemset entry to the
+platform gem for the build system the way `gnome-maps-rb`'s flake does, since
+the Rust source gem wants `cargo` at build time.
+
+**Why nothing calls into either.** `git grep -i spelling` over
+`origin/main`'s whole tree, including `src/*.js` and every `*.blp`, matches
+nothing: `libspelling` appears only in
+`build-aux/modules/libspelling.json`, a Flatpak module that unpacks a
+`gi-docgen` documentation `.deb` so the sandboxed build has offline API docs
+to browse — it is build tooling, not a GI namespace `src/main.js` imports, and
+there is no `GtkSourceView`/`GtkTextView` anywhere in the app for a spell
+checker to attach to; `Sidebar.blp`'s search entry is a plain
+`Gtk::SearchEntry` upstream never spell-checks.
+
+`Xdp` (the GI namespace `ashpd` is the Rust-native equivalent of) appears only
+in `src/bin.js:6,19`, where `Xdp.Portal.running_under_flatpak()` refuses to
+start outside Flatpak. `lib/package.rb`'s class comment already explains why
+this port does not replicate that guard: it is a gem, installed by RubyGems or
+run from a checkout, so there is no sandbox to require and the guard would
+reject every supported way of running it. That is a documented design
+decision from before this round, not a gap this round's gem-wiring closes —
+inventing a new "open externally through the portal" feature nowhere in
+upstream's `WebView.js`/`Sidebar.js` navigation handling, just to have
+somewhere to call `Ashpd::OpenUri.open`, would be adding behaviour the spec
+does not have rather than porting it.
+
+Both gems are real dependencies, proven to load, kept in the lockfile and the
+flake's typelib path, ready for the day a future upstream commit adds a text
+editor or a portal-mediated open. Until then there is no upstream call site to
+port, and the honest state of this round is: wired, loadable, unused — not a
+hand-rolled substitute removed, because none existed.
+
+**Reported upstream:** n/a — not a port divergence, a gap in what upstream's
+own source calls.

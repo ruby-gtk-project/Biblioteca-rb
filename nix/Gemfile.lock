@@ -4,6 +4,22 @@ GEM
     adwaita (4.3.9)
       gtk4 (= 4.3.9)
       rake
+    ashpd (0.1.1-aarch64-linux)
+      gem_kit (~> 0.2)
+    ashpd (0.1.1-aarch64-linux-musl)
+      gem_kit (~> 0.2)
+    ashpd (0.1.1-arm-linux)
+      gem_kit (~> 0.2)
+    ashpd (0.1.1-arm-linux-musl)
+      gem_kit (~> 0.2)
+    ashpd (0.1.1-arm64-darwin)
+      gem_kit (~> 0.2)
+    ashpd (0.1.1-x86_64-darwin)
+      gem_kit (~> 0.2)
+    ashpd (0.1.1-x86_64-linux)
+      gem_kit (~> 0.2)
+    ashpd (0.1.1-x86_64-linux-musl)
+      gem_kit (~> 0.2)
     atk (4.3.9)
       glib2 (= 4.3.9)
       rake
@@ -24,6 +40,7 @@ GEM
     gdk_pixbuf2 (4.3.9)
       gio2 (= 4.3.9)
       rake
+    gem_kit (0.2.0)
     gettext (3.5.2)
       erubi
       locale (>= 2.0.5)
@@ -47,7 +64,10 @@ GEM
       atk (= 4.3.9)
       gdk4 (= 4.3.9)
       gsk4 (= 4.3.9)
-    json (3.0.2)
+    json (3.1.0)
+    libspelling (1.0.0)
+      gem_kit (~> 0.2)
+      gobject-introspection (~> 4.3)
     locale (2.1.5)
       fiddle
     matrix (0.4.3)
@@ -55,7 +75,7 @@ GEM
     pango (4.3.9)
       cairo-gobject (= 4.3.9)
       gobject-introspection (= 4.3.9)
-    pkg-config (1.6.5)
+    pkg-config (1.6.7)
     prime (0.1.4)
       forwardable
       singleton
@@ -71,13 +91,21 @@ GEM
       rake
 
 PLATFORMS
-  ruby
+  aarch64-linux
+  aarch64-linux-musl
+  arm-linux
+  arm-linux-musl
+  arm64-darwin
+  x86_64-darwin
   x86_64-linux
+  x86_64-linux-musl
 
 DEPENDENCIES
   adwaita (= 4.3.9)
+  ashpd (~> 0.1)
   gettext (~> 3.5)
   gtk4 (= 4.3.9)
+  libspelling (~> 1.0)
   webkit-gtk (= 4.3.9)
 
 BUNDLED WITH

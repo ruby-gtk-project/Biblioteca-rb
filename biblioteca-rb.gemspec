@@ -116,8 +116,10 @@ Gem::Specification.new do |spec|
   # `src/main.js` imports Gtk, Adw and WebKit and calls `pkg.initGettext()`;
   # these are the Ruby equivalents of those four imports.
   spec.add_dependency("adwaita", "~> 4.3")                                          # Adw.* widgets
+  spec.add_dependency("ashpd", "~> 0.1")                                            # Xdp.Portal.running_under_flatpak, OpenURI
   spec.add_dependency("gettext", "~> 3.5")                                          # pkg.initGettext
   spec.add_dependency("gtk4", "~> 4.3")                                             # Gtk.*, Gio.*, GLib.*
+  spec.add_dependency("libspelling", "~> 1.0")                                      # Spelling.* spellcheck on the search entry
   spec.add_dependency("webkit-gtk", "~> 4.3")                                       # WebKit.WebView
 
   # Dev, Test, & Release Tasks

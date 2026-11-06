@@ -12,6 +12,8 @@ source "https://rubygems.org"
 # 4.3.9 is the train every binding defect in FINDINGS.md was reproduced
 # against; a bump moves those reproductions and has to be re-verified.
 gem "adwaita", "4.3.9"
+gem "ashpd", "~> 0.1"
 gem "gettext", "~> 3.5"
 gem "gtk4", "4.3.9"
+gem "libspelling", "~> 1.0"
 gem "webkit-gtk", "4.3.9"
