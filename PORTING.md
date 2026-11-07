@@ -5,9 +5,9 @@
 | Upstream | Biblioteca, implemented in GJS + Blueprint + GTK4/libadwaita/WebKitGTK |
 | Spec ref | `origin/main` of this repo — read with `git show origin/main:<path>` / `git ls-tree -r --name-only origin/main`; never checked out, never merged |
 | Port | `ruby` branch, `lib/` |
-| Reports | `.reports/component-identification.md`, `.reports/component-inventory.md`, `.reports/component-parity.md` (+ `-round5`), `.reports/test-parity.md` (+ `-round5`), `.reports/translation-parity.md`, `.reports/accountability-ensurance.md` (+ `-round5`), `.reports/drive.md` |
+| Reports | `.reports/component-identification.md`, `.reports/component-inventory.md`, `.reports/component-parity.md` (+ `-round5`, `-round6`), `.reports/test-parity.md` (+ `-round5`, `-round6`), `.reports/translation-parity.md` (+ `-round5`, `-round6`), `.reports/accountability-ensurance.md` (+ `-round5`, `-round6`), `.reports/component-identification-round6.md`, `.reports/drive.md` |
 | Repo ledgers | `COMPONENT_PARITY.md`, `TEST_PARITY.md`, `TRANSLATION_PARITY.md`, `FINDINGS.md` |
-| Last audit | 2026-11-07, round 5, at port commit `828bdd5` / inventory on `7fd14a8` |
+| Last audit | 2026-11-07, round 6, at port commit `2844629` (no application-code diff from round 5's `828bdd5`) — five open gaps and two stale-ledger items from round 5 re-verified still open/unfixed; see `.reports/*-round6.md` |
 
 ## Upstream
 
