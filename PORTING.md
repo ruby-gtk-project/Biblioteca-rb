@@ -89,11 +89,29 @@ clean=false**:
 
 1. Upstream bug reports (`FINDINGS.md` #5, #6, #11, #12) not filed against
    upstream.
-2. `rake data:install` never run; only the four templates `rake
-   data:validate` checks are observed.
+2. ~~`rake data:install` never run~~ — **closed this round.** Run against
+   `PREFIX=/tmp/biblioteca-install-test`: it copies the desktop entry,
+   metainfo, D-Bus service, compiles and installs the GSettings schema, and
+   installs the icon tree (`share/icons/hicolor/{scalable,symbolic}/...`),
+   all under the given prefix with no manual step. `rake data:validate`
+   was the only half of this task observed before; the install path itself
+   is now observed too.
 3. No pointer/keyboard driving of `Gtk::GestureClick` on the two sidebar
    rows (`lib/browse_view.rb#click_gesture`, `lib/search_view.rb#click_gesture`)
    — both handlers are reached only by name, never fired as an event.
+   **Tried this round and abandoned:** `Gtk::GestureClick#signal_emit`
+   does fire the real `pressed` signal on the real gesture object, but
+   `gesture.current_button` stays `0` afterward — confirmed by a standalone
+   check (`g.signal_emit("pressed", 1, 10.0, 20.0)` then reading
+   `current_button`) — because GTK sets that field from the X event the
+   gesture's controller claimed, not from the signal's own arguments.
+   `BrowseView#on_pressed` and `SearchView#on_pressed` both gate their
+   middle-click behaviour on `gesture.current_button == MIDDLE_BUTTON`, so a
+   synthetic `signal_emit` can only ever take the `else` branch — it would
+   prove the gesture does nothing, not that the middle-click path works.
+   Closing this gap for real needs an X11 input event (`xdotool` or
+   XTest-level synthesis against the xvfb display), not a GObject signal
+   emission; not done this round.
 4. No Flatpak manifest; `flatpak-builder-lint` has nothing to check (same
    gap as "Not started" above).
 5. Theme-swatch accessible **label** value unverified over AT-SPI — only
@@ -104,12 +122,13 @@ clean=false**:
    drive checks; the independently re-run figure is 395/395 (451 combined)
    — a stale number, not a regression, but unflagged staleness is itself
    how a false green starts.
-7. `TEST_PARITY.md`'s "Test command" cell says `bundle exec rspec`, which
-   fails outright on this checkout (`Gem::Exception`, rspec-core not a
-   bundler executable); the working command is the longer `ruby -e
-   'require "rspec/core"; ...'` form used in Runtime above.
+7. ~~`TEST_PARITY.md`'s "Test command" cell said `bundle exec rspec`~~ —
+   **closed this round.** It now carries the command that actually works
+   on this checkout, the same `ruby -e 'require "rspec/core"; ...'` form
+   used in Runtime above.
 
-`clean=false`: none of the above is closed as of this audit.
+`clean=false`: gaps 2 and 7 closed this round; 1, 3, 4, 5, and 6 remain
+open.
 
 ## Blockers
 

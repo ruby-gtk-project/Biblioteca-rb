@@ -8,7 +8,7 @@
 | Upstream tests | **0** |
 | Upstream tests ported | 0 / 0 |
 | Extra (non-parity) specs in the port | 2 files |
-| Test command | `bundle exec rspec` |
+| Test command | `ruby -e 'require "rspec/core"; exit RSpec::Core::Runner.run(["--format", "progress", "--require", "spec_helper", "spec"])'` |
 
 Parity is 0 / 0 and met: upstream has no test suite. `meson.build` has no
 `test()` call, there is no test tree on `origin/main`, and the `Makefile`'s
