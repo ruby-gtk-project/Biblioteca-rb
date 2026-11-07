@@ -2,185 +2,136 @@
 
 | | |
 |---|---|
-| Upstream | `origin/main` @ `9e4ededb8dff1b537de09d25ce2e55d1997c43d3` (`9e4eded`) |
-| Port | this branch, `ruby` |
-| Reports | `.reports/component-identification.md`, `.reports/component-parity.md`, `.reports/test-parity.md`, `.reports/translation-parity.md`, `.reports/accountability-ensurance.md` |
+| Upstream | Biblioteca, implemented in GJS + Blueprint + GTK4/libadwaita/WebKitGTK |
+| Spec ref | `origin/main` of this repo — read with `git show origin/main:<path>` / `git ls-tree -r --name-only origin/main`; never checked out, never merged |
+| Port | `ruby` branch, `lib/` |
+| Reports | `.reports/component-identification.md`, `.reports/component-inventory.md`, `.reports/component-parity.md` (+ `-round5`), `.reports/test-parity.md` (+ `-round5`), `.reports/translation-parity.md`, `.reports/accountability-ensurance.md` (+ `-round5`), `.reports/drive.md` |
 | Repo ledgers | `COMPONENT_PARITY.md`, `TEST_PARITY.md`, `TRANSLATION_PARITY.md`, `FINDINGS.md` |
-| Reports last audited | 2026-11-06, at port commit `ced6a5b` |
-| This header regenerated | 2026-11-07, at port commit (this round's, see `git log -1`) |
-
-**This header was stale and has been rewritten.** The previous version said
-"Last audit 2026-11-02, at port commit `d63ee49`" and "Nothing in this port
-has been run" — both false by the time they were last read: the `.reports/`
-files themselves (audited 2026-11-06, four days later, at `ced6a5b`) already
-record `394 of 394 drive checks`, `36 examples, 0 failures` and three
-independent re-runs. That gap between what this file claimed and what the
-dated reports next to it already said is itself an accountability finding
-(`.reports/accountability-ensurance.md` F-7) and will not recur if this file
-is regenerated from the reports' own headers each time it is touched, which
-is what the table above now does — its two dates are different because the
-audits and this resume document are not produced by the same pass, and
-pretending they are is exactly the error being corrected.
-
-Current, re-verified this round: `nix develop --command xvfb-run -a -s
-'-screen 0 1600x1200x24' rake default` runs the full RSpec suite (38
-examples), RuboCop, `rake schema:validate`, `rake gettext:check_pot_drift` and
-all three UI drivers (31 / 25 / 394 steps) end to end and exits 0. See
-`TEST_PARITY.md` for the commands and `.github/workflows/ci.yml` for the CI
-job that now runs the same thing on every push.
+| Last audit | 2026-11-07, round 5, at port commit `828bdd5` / inventory on `7fd14a8` |
 
 ## Upstream
 
 Biblioteca is a GNOME documentation browser: a sidebar tree of GNOME platform
 docs with fuzzy search, and a tab view of WebKit webviews with navigation,
 zoom, find-in-page and a URL bar for online pages. It is implemented in
-JavaScript (GJS) with blueprint (`.blp`) UI, GTK 4 + libadwaita 1 +
-WebKitGTK 6.0. The spec lives on the `origin/main` ref of this repo; read it
-with `git show origin/main:<path>`. It is never checked out and never merged.
+JavaScript (GJS) with Blueprint (`.blp`) UI, GTK 4 + libadwaita 1 +
+WebKitGTK 6.0. The spec is the `origin/main` ref of this repo.
 
 ## Done
 
-Written, in house style, mapped one upstream source file to one `lib/` file,
-and run: `nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' rake
-default` draws every row below in a real GTK process (see "Open gaps" and
-TEST_PARITY.md for the exact counts).
+Components implemented and observed working in a real GTK process under
+`nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' ruby
+test/drive_biblioteca.rb` (plus `test/drive_app.rb` and
+`test/drive_sidebar.rb` — see Runtime below). One upstream source file maps
+to one `lib/` file, per `.reports/component-inventory.md`:
 
-| Port | Upstream |
+| `lib/` path | Upstream file(s) |
 |---|---|
-| `lib/biblioteca.rb` | the file map; requires the application |
-| `lib/biblioteca/application.rb` | `src/application.js`, `src/actions.js`, `src/main.js` |
-| `lib/package.rb` | `src/bin.js` (`imports.package.init`), `src/main.js` |
-| `lib/about_dialog.rb` | `src/about.js` |
-| `lib/settings.rb` | `data/app.gschema.xml`, `src/util.js` |
-| `lib/style.rb` | `src/style.css` (heredoc, copied verbatim) |
+| `lib/package.rb` | `src/bin.js` (`imports.package.init`), `src/main.js` (`pkg.initGettext`) |
+| `lib/settings.rb` | `data/app.gschema.xml`, `src/util.js` (`settings`) |
+| `lib/style.rb` | `src/style.css` |
+| `lib/biblioteca/application.rb` | `src/application.js`, `src/actions.js`, `src/main.js`, `src/init.js`, startup half of `src/bin.js` |
 | `lib/window.rb` | `src/window.blp` + `src/window.js` |
-| `lib/window_state.rb` | `troll/src/util.js` (`persistWindowState`) |
-| `lib/shortcuts_window.rb` | `src/Shortcuts.js`; `src/Shortcuts.blp` → `data/ui/shortcuts.ui` |
+| `lib/window_state.rb` | `troll/src/util.js` (`persistWindowState`) — see Blockers |
+| `lib/shortcuts_window.rb` | `src/Shortcuts.blp` + `src/Shortcuts.js` |
+| `lib/about_dialog.rb` | `src/about.js` |
 | `lib/find_overlay.rb` | `src/FindOverlay.blp` + `src/FindOverlay.js` |
 | `lib/web_view.rb` | `src/WebView.blp` + `src/WebView.js` |
 | `lib/sidebar.rb` | `src/sidebar/Sidebar.blp` + `src/sidebar/Sidebar.js` |
 | `lib/sidebar_menu.rb` | `menu menu_app` in `src/sidebar/Sidebar.blp` |
-| `lib/theme_selector.rb` | `troll/src/widgets/ThemeSelector.{js,blp,css}` |
+| `lib/theme_selector.rb` | `troll/src/widgets/ThemeSelector.{js,blp,css}` — see Blockers |
 | `lib/zoom_buttons.rb` | `src/sidebar/ZoomButtons.blp` + `.js` |
 | `lib/browse_view.rb` | `src/sidebar/BrowseView.blp` + `.js` |
 | `lib/search_view.rb` | `src/sidebar/SearchView.blp` + `.js` |
 | `lib/documentation_page.rb` | `src/sidebar/DocumentationPage.js` |
 | `lib/doc_index.rb` | `build-aux/build-index.js` |
 | `lib/fzy.rb` | `src/sidebar/fzy.js` |
-| `data/app.{desktop,gschema.xml,service,metainfo.xml}`, `data/icons/` | upstream `data/` + `src/icons/`, app id substituted; `diff` empty after normalising the id |
-| `po/` (`POTFILES.in`, `extract.rb`, the `.pot`) | the 64 upstream msgids, byte for byte |
-| `rakelib/biblioteca.rake` | the install and two validate steps of `data/meson.build` |
 
-The two upstream `.blp` list-item factories were rebuilt as
-`Gtk::SignalListItemFactory` with `setup`/`bind` handlers
-(`lib/browse_view.rb:144`, `lib/search_view.rb:171`), not transcribed.
+That is 19 components, matching the "19 components covered" figure the
+drive and parity reports both cite.
+
+## Runtime
+
+Command (as re-run and recorded in `.reports/component-parity-round5.md`,
+2026-11-07, at port commit `828bdd5`):
+
+```sh
+nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' ruby test/drive_biblioteca.rb
+nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' ruby test/drive_app.rb
+nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' ruby test/drive_sidebar.rb
+nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' ruby -e 'require "rspec/core"; exit RSpec::Core::Runner.run(["--format","progress","--require","spec_helper","spec"])'
+```
+
+Result: `drive_ok=true`. 395 (drive_biblioteca) + 31 (drive_app) + 25
+(drive_sidebar) = **451 checks passed / 0 failed**, across **19 components**
+(the table above). Separately, the RSpec suite: **38 examples passed / 0
+failures**. `drive_app.rb` reports 2 steps skipped (no gi-docgen
+documentation tree on this machine), not counted as failures and covered
+instead by the synthetic fixture `drive_sidebar.rb` exercises.
 
 ## Not started
 
 | Upstream | State |
 |---|---|
-| `build-aux/app.drey.Biblioteca.json`, `build-aux/app.drey.Biblioteca.Devel.json`, `build-aux/modules/*.json` | no `build-aux/`, no manifest of any kind in the port. Upstream's only supported distribution |
-| `data/meson.build:38` — `appstream-util validate` (the stricter Flathub validator) | has a port counterpart as of this round — `rake data:validate` runs it — but it fails on upstream's own content (`FINDINGS.md` #12), not a port defect |
-| `Makefile:19-20` — `flatpak-builder-lint` on both manifests | nothing to lint, because of the manifest row above |
+| `build-aux/app.drey.Biblioteca.json`, `build-aux/app.drey.Biblioteca.Devel.json`, `build-aux/modules/*.json` | no Flatpak manifest of any kind exists in the port — upstream's only supported distribution mechanism |
+| `Makefile:19-20` — `flatpak-builder-lint` on both manifests | nothing to lint, because no manifest exists |
 
-`src/bin.js:27-32` (the Flatpak-required startup refusal) and `src/init.js:8`
-(dead code upstream, no call site) have moved out of this table: the former
-now has a port counterpart (`exe/biblioteca`'s doc-root check, see "Open
-gaps" below); the latter stays unported deliberately, since upstream itself
-never calls it.
+Every upstream user-facing component (the 19 in Done, plus `data/`, `po/`,
+and the Shortcuts window's `data/ui/shortcuts.ui`) has a port counterpart;
+`.reports/component-inventory.md` records "nothing in the list is missing."
+What remains unstarted is packaging, not application code.
 
 ## Open gaps
 
-Regenerated from each `.reports/` file's own header, as of its own audit
-(2026-11-06, `ced6a5b`), with what this round (commit after `f938229`) has
-since closed marked inline. These five counts are not summed into one
-headline figure: they come from different axes (components, tests,
-translation, accountability) with different units, and the previous header's
-unreconciled "21 vs. 15" was itself the F-7 finding — a sum presented as
-authoritative that nobody could actually derive from the cited sources is
-worse than five counts kept separate.
+The last audit (`.reports/accountability-ensurance-round5.md` +
+`.reports/component-parity-round5.md`, 2026-11-07) reported **7 gap(s),
+clean=false**:
 
-* **`.reports/component-parity.md` — 7 open as audited.** Closed this round:
-  1 (Flatpak startup refusal — `exe/biblioteca` now refuses to start when no
-  documentation root exists), 3 and 4 (`troll` vendored at
-  `vendor/troll/`, pinned to `37b53b2`), 6 (`Sidebar#start_index`'s `-1`
-  clamp — see `FINDINGS.md` #11 for what actually changed), 7 (GSettings
-  schema now compiled unconditionally, not gated on a step nobody ran
-  automatically). Partially closed: 5 (the accessible-property *name* is now
-  asserted against `Gtk::AccessibleProperty`'s list in
-  `test/drive_biblioteca.rb`; the label itself is still not verified over
-  AT-SPI). Still open: 2 (Flatpak packaging — no manifest exists; recorded as
-  a gap, not reworded as a non-goal). **Open now: 1 full gap, 1 half-gap**,
-  down from 7.
-* **`.reports/test-parity.md` — 3 of 7 as audited** (`rake data:validate`
-  silently validated nothing; `appstreamcli`/`appstream-util`/
-  `flatpak-builder-lint` all missing from the devshell). Closed this round:
-  `desktop-file-utils`, `appstream` and `appstream-glib` are all in the
-  devshell now, `rake data:validate` runs both AppStream validators for real
-  (and surfaces upstream content issues — `FINDINGS.md` #12 — rather than
-  silently passing), and `rake default` plus a new CI workflow
-  (`.github/workflows/ci.yml`) run the suite, RuboCop, `rake
-  schema:validate`, `rake gettext:check_pot_drift` and all three drivers on
-  every push. Still open: `flatpak-builder-lint` on both manifests — same
-  cause as component-parity gap 2. **Open now: 1 of 3** (component-parity
-  gap 2 and this one are the same underlying gap, counted once each by their
-  own report).
-* **`.reports/translation-parity.md` — 2 gaps as audited** (TP-1: no drift
-  check on the `.pot`; TP-2: no real catalogue, nothing proving `_()` ever
-  returned a translated string). Both closed this round: `rake
-  gettext:check_pot_drift` (TP-1) and `po/fr.po`, a complete 64/64-message
-  French catalogue proven by `spec/translation_spec.rb` (TP-2). **Open now:
-  0 of 2.**
-* **`.reports/component-identification.md` — CI-1, 2 units unidentifiable**
-  (the `troll` gitlink). Closed this round by the same vendoring that closed
-  component-parity gaps 3 and 4. **Open now: 0.**
-* **`.reports/accountability-ensurance.md`** does not count in the same
-  units as the four above — it names specific sentences and specific files,
-  not a gap tally — so it is not folded into this list; read it directly. Its
-  F-6 and F-7 findings are both answered this round: F-6 (the Flatpak-refusal
-  framing) by rewriting `FINDINGS.md` #10 and `lib/package.rb`'s comment to
-  state plainly that the feature was missing, not settled; F-7 (this file's
-  own stale header) by the regeneration above.
+1. Upstream bug reports (`FINDINGS.md` #5, #6, #11, #12) not filed against
+   upstream.
+2. `rake data:install` never run; only the four templates `rake
+   data:validate` checks are observed.
+3. No pointer/keyboard driving of `Gtk::GestureClick` on the two sidebar
+   rows (`lib/browse_view.rb#click_gesture`, `lib/search_view.rb#click_gesture`)
+   — both handlers are reached only by name, never fired as an event.
+4. No Flatpak manifest; `flatpak-builder-lint` has nothing to check (same
+   gap as "Not started" above).
+5. Theme-swatch accessible **label** value unverified over AT-SPI — only
+   the property *name* is asserted (against `Gtk::AccessibleProperty`), not
+   the label text, because of a "Can't connect to a11y bus" constraint in
+   this environment.
+6. `COMPONENT_PARITY.md` and (at the time) this file cited "394 of 394"
+   drive checks; the independently re-run figure is 395/395 (451 combined)
+   — a stale number, not a regression, but unflagged staleness is itself
+   how a false green starts.
+7. `TEST_PARITY.md`'s "Test command" cell says `bundle exec rspec`, which
+   fails outright on this checkout (`Gem::Exception`, rspec-core not a
+   bundler executable); the working command is the longer `ruby -e
+   'require "rspec/core"; ...'` form used in Runtime above.
+
+`clean=false`: none of the above is closed as of this audit.
 
 ## Blockers
 
-None of these block the port from running — `webkit-gtk` is installed and
-working via the Nix devshell's `nix/Gemfile`, and the drivers above exercise
-every row named here. Kept as a record of what still constrains the port's
-*behaviour*, not its ability to start:
-
+* **Survey/inventory already complete, no new commit needed this run.**
+  `.reports/component-inventory.md` exists on `origin/ruby` at commit
+  `2f7d756` ("Inventory upstream components"); the working tree was clean
+  and the branch up to date with `origin/ruby` before this file was written
+  — no new survey or commit was required to produce it.
+* **Two upstream dependencies are unreadable from the pinned spec ref.**
+  `troll/` is a git submodule (gitlink) and is absent from `origin/main`,
+  so `troll/src/widgets/ThemeSelector.{js,blp,css}` and `persistWindowState`
+  in `troll/src/util.js` cannot be read from `origin/main` as checked out
+  here. Their parity against `lib/theme_selector.rb` and
+  `lib/window_state.rb` therefore cannot be verified from the pinned
+  upstream ref — a hole in what can be audited, not a claim that either
+  file is correct or incorrect.
+* **No `po/` on upstream at all.** `origin/main` has no `po/` directory, no
+  `LINGUAS`, no `.po` file — only `_("…")` msgids in the `.blp`/`.js`
+  sources. The port's `po/POTFILES.in`, `po/extract.rb`, the `.pot` and
+  `po/fr.po` are therefore extras the port added, not gaps against a
+  catalogue upstream never had, per `.reports/component-inventory.md`.
 * **Flatpak-only runtime, upstream side.** `src/bin.js` hard-exits outside
-  Flatpak and the default page is `file:///app/share/doc/gtk4/index.html`,
-  i.e. the Flatpak SDK docs mounted at `/app`. A checkout-run Ruby port has no
-  `/app`, so the default URI and the doc-index root are configurable here
-  (`DocIndex::DEFAULT_ROOTS`, `Window#default_uri` → `Sidebar#start_uri`),
-  and `exe/biblioteca` now refuses to start on the one condition it can check
-  in the sandbox guard's place — see "Open gaps" above and `FINDINGS.md` #10.
-* **`doc-index.json` has no source outside Flatpak.** Upstream's
-  `build-aux/build-index.js` runs as a meson install script over the installed
-  GI-DocGen HTML trees. `lib/doc_index.rb` rebuilds the same structure at
-  first run into `XDG_CACHE_HOME/biblioteca-rb/`, but with no GI-DocGen tree
-  on the machine `#scan_libraries` returns `[]` and the sidebar would be
-  empty — which is exactly the condition `exe/biblioteca`'s new startup
-  refusal now catches instead of opening uselessly.
-* **No `po/` on `origin/main`** despite ~40 `_()` msgids in the blueprints and
-  JS, so there is no catalogue to port. `po/fr.po` (this round) is the port's
-  own, not a carried-over upstream one.
-* **`Adwaita::Application` is broken in the bindings**, so the application
-  object is a `Gtk::Application` with an `Adwaita::ApplicationWindow`; and
-  `GtkShortcutsWindow` is deprecated in GTK 4.18 but kept, because the Adwaita
-  replacement cannot draw the two gesture rows (`FINDINGS.md` #7).
-
-## Running it
-
-```sh
-direnv allow                                              # or: nix develop
-nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' rake default
-nix develop --command xvfb-run -a ruby exe/biblioteca      # just the app
-```
-
-The dev shell's own banner (printed on every `nix develop`) names the exact
-drive and spec commands for this checkout — read it rather than guessing at
-flags. `.claude/skills/ruby-gtk` is the style contract; invoke it before
-touching any widget file. `rubocop` (against a resolving gemset) before
-committing.
+  Flatpak and upstream's default page assumes `/app` (the Flatpak mount).
+  The port makes the doc-index root and default URI configurable instead
+  (`DocIndex::DEFAULT_ROOTS`, `Window#default_uri` → `Sidebar#start_uri`).
