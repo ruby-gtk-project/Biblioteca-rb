@@ -23,10 +23,15 @@ namespace :drive do
   task :biblioteca do
     ruby(File.join(TEST_DIR, "drive_biblioteca.rb"))
   end
+
+  desc "Drive the sidebar's two middle-click gestures with a real X11 event, not signal_emit (needs a display, xdotool)"
+  task :middle_click do
+    ruby(File.join(TEST_DIR, "drive_middle_click.rb"))
+  end
 end
 
-desc "Run all three UI drivers (needs a display; see rakelib/README or the devshell banner)"
-task drive: ["drive:app", "drive:sidebar", "drive:biblioteca"]
+desc "Run all four UI drivers (needs a display; see rakelib/README or the devshell banner)"
+task drive: ["drive:app", "drive:sidebar", "drive:biblioteca", "drive:middle_click"]
 
 desc "Run the RSpec suite, if rspec is loadable"
 task :spec_if_available do

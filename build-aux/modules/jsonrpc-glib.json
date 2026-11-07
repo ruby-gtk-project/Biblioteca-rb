@@ -1,0 +1,16 @@
+{
+  "name": "jsonrpc-glib",
+  "buildsystem": "simple",
+  "build-commands": [
+    "install -d /app/share/doc",
+    "cp -a share/doc/. /app/share/doc/"
+  ],
+  "sources": [
+    {
+      "type": "archive",
+      "url": "https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Everything/x86_64/os/Packages/j/jsonrpc-glib-devel-3.44.2-6.fc44.x86_64.rpm",
+      "sha256": "1b6e1294714e3a008a5465e946d121816693b9d229fdae2889d13da7b7ac930d",
+      "archive-type": "rpm"
+    }
+  ]
+}

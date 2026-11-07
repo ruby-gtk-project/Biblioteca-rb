@@ -1,0 +1,16 @@
+{
+  "name": "libshumate",
+  "buildsystem": "simple",
+  "build-commands": [
+    "install -d /app/share/doc",
+    "cp -a share/doc/. /app/share/doc/"
+  ],
+  "sources": [
+    {
+      "type": "archive",
+      "url": "https://dl.fedoraproject.org/pub/fedora/linux/updates/44/Everything/x86_64/Packages/l/libshumate-doc-1.6.3-1.fc44.noarch.rpm",
+      "sha256": "a51aa92fedf2312f734fe50339b1fb422533de794fca4c726dd82a9781f67776",
+      "archive-type": "rpm"
+    }
+  ]
+}

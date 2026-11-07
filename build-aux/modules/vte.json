@@ -1,0 +1,16 @@
+{
+  "name": "vte",
+  "buildsystem": "simple",
+  "build-commands": [
+    "install -d /app/share/doc",
+    "cp -a share/doc/. /app/share/doc/"
+  ],
+  "sources": [
+    {
+      "type": "archive",
+      "url": "https://dl.fedoraproject.org/pub/fedora/linux/updates/44/Everything/x86_64/Packages/v/vte291-gtk4-devel-0.84.1-1.fc44.x86_64.rpm",
+      "sha256": "a5559ba7c75ecfd215cc761f69e671dbde4ed7b126ad41260f1ece8f3c1e5e39",
+      "archive-type": "rpm"
+    }
+  ]
+}

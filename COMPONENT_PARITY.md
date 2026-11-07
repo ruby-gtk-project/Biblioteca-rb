@@ -28,10 +28,21 @@ opens the window, and two driver scripts walk it:
 Both exit 0 on this checkout. What that does **not** cover: the tree and search
 steps in `test/drive_app.rb` skip on a machine with no gi-docgen documentation
 installed (this one has none, which is why `test/drive_sidebar.rb` supplies its
-own); nothing drives a pointer or a keyboard, so the gesture and middle-click
-paths are reached only through the actions they end in; and the rows below that
-name a specific unverified call still name it, because activating an action is
-not the same as checking what it drew.
+own); and the rows below that name a specific unverified call still name it,
+because activating an action is not the same as checking what it drew.
+
+A fourth driver, `test/drive_middle_click.rb`, closes the pointer gap above:
+`Gtk::GestureClick#signal_emit` fires the `pressed` signal but never sets
+`gesture.current_button` (it stays `0`, verified as the first step of each of
+that script's two runs), so the middle-click branch both
+`lib/browse_view.rb#on_pressed` and `lib/search_view.rb#on_pressed` gate on had
+never actually been taken by any driver in this port. `drive_middle_click.rb`
+instead synthesizes a real X11 button-2 press through `xdotool`/XTest against
+the same xvfb display, on a mapped `BrowseView` and a mapped `SearchView` each
+in their own window, and asserts `win.new-tab` was actually activated with the
+clicked row's uri — plus a real left click on the same row, asserted to not
+activate it, so the branch is shown to be button-specific and not just
+reachable. 8 of 8 steps pass.
 
 ---
 
@@ -315,15 +326,31 @@ What is still owed:
 2. `rake data:install` has not been run — the install layout itself (as
    opposed to the four templates `rake data:validate` checks, which now run
    for real) is still unobserved.
-3. Nothing drives a pointer or a keyboard. The gesture and middle-click paths
-   are reached only through the actions they end in, so the gestures
-   themselves — `Gtk::GestureClick` on the two sidebar rows — are still
-   unobserved.
-4. No Flatpak manifest of any kind exists, so there is nothing for
-   `flatpak-builder-lint` to check and no Flatpak build to actually exercise
-   the startup-refusal guard the way `src/bin.js:27-32` is exercised upstream
-   (inside the sandbox it checks for). Recorded as a gap, not reworded as a
-   non-goal.
+3. ~~Nothing drives a pointer or a keyboard.~~ Closed this round:
+   `test/drive_middle_click.rb` drives both sidebar rows' `Gtk::GestureClick`
+   with a real X11 button-2 event synthesized through `xdotool`/XTest against
+   the xvfb display (`gesture.current_button` confirmed populated, unlike a
+   `signal_emit`, which leaves it `0`), and asserts `win.new-tab` fires with
+   the clicked row's uri. 8 of 8 steps pass. Keyboard input into these two
+   rows is not covered — the gesture is pointer-only upstream too
+   (`BrowseView.js`/`SearchView.js` wire `Gtk.GestureClick`, nothing on
+   `Gtk.EventControllerKey`) — so there is no keyboard path to drive.
+4. Partly closed this round: `build-aux/org.rubygtkproject.Biblioteca.json`,
+   `.Devel.json` and the six `build-aux/modules/*.json` files now exist,
+   carrying upstream's `app.drey.Biblioteca*.json` and its doc-fetch modules
+   over under this port's own app id and `rake data:install`/`gem install` in
+   place of upstream's meson module. What is still owed: the `Biblioteca`
+   module installs the gem itself but none of its six runtime gem
+   dependencies (`gtk4`, `adwaita`, `webkit-gtk`, `gettext`, `ashpd`,
+   `libspelling`) are vendored as Flatpak modules of their own, so this
+   manifest cannot actually produce a working sandboxed build yet — it is
+   lint-checkable, not build-complete. `flatpak-builder-lint` itself was not
+   run: it is not packaged in nixpkgs and is not already present on this
+   machine, and this environment's sandbox policy blocks fetching and running
+   an unreviewed external tool (`uvx flatpak-builder-lint` was denied as
+   "Code from External"), so the "run flatpak-builder-lint against them" half
+   of this gap is still open, the same kind of environment limit as the
+   AT-SPI gap below — recorded here rather than claimed.
 5. The theme-swatch accessible-label claim (round-2 row 11a): the property
    *name* is now asserted against GTK's own list (round-4 item 5, above), but
    the label itself has still not been verified out-of-band over AT-SPI.
@@ -361,9 +388,10 @@ what closed it.
 
 Closed at `189b4e6` and `60ee85c`. `nix/Gemfile` carries the four runtime gems,
 and the application has been run under `xvfb-run`:
-`test/drive_biblioteca.rb` walks the whole app for 394 of 394 checks and 18
-screenshots and prints `DRIVE OK`, `test/drive_app.rb` runs 31 steps with 2
-skipped and `test/drive_sidebar.rb` 24 steps, all three on this checkout. The
+`test/drive_biblioteca.rb` walks the whole app for 395 of 395 checks (451
+combined across all three drivers) and 18 screenshots and prints `DRIVE OK`,
+`test/drive_app.rb` runs 31 steps with 2 skipped and `test/drive_sidebar.rb`
+25 steps, all three on this checkout. The
 bet on `data/ui/shortcuts.ui` came in: `Gtk::Builder` does still instantiate
 the deprecated `GtkShortcutsWindow`, and `app.shortcuts` opens it in
 `test/drive_app.rb`.

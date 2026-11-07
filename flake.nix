@@ -247,6 +247,12 @@
             # carries one it can start itself: `xvfb-run ruby exe/<app>` both
             # launches the app and is how test/drive_*.rb is run.
             pkgs.xvfb-run
+            # Real X11 input synthesis for test/drive_middle_click.rb: a
+            # Gtk::GestureClick#signal_emit fires the signal but leaves
+            # gesture.current_button at 0, so the middle-click branch in
+            # BrowseView#on_pressed / SearchView#on_pressed can only be
+            # exercised by an actual pointer event through the display.
+            pkgs.xdotool
             pkgs.gsettings-desktop-schemas
             pkgs.adwaita-icon-theme
             # `rake data:validate` shells out to these and silently skips
