@@ -1242,6 +1242,20 @@ GtkDriver.drive(Biblioteca::Application.new, shots: SHOTS, interval: 400, timeou
         selector.bin.has_css_class?(ThemeSelector::ROOT_CLASS)
       end
       d.check('the follow-system swatch is lit to start with') { selector.follow_button.active? }
+      # ThemeSelector::BUTTON_UI sets the accessible label through a
+      # Gtk::Builder <accessibility> block (lib/theme_selector.rb — there is
+      # no setter method to call instead), and Gtk::Builder silently accepts
+      # a misspelled property name there: it would parse, build the button,
+      # and simply not register anything with the accessibility tree,
+      # in-process indistinguishable from success. Checked here against
+      # Gtk::AccessibleProperty's own nick list, which is the one thing this
+      # process actually can assert about it; verifying the label itself —
+      # not just the property name — needs AT-SPI, out of process, and is not
+      # done here (see COMPONENT_PARITY.md).
+      d.check('the <accessibility> block names a real Gtk::AccessibleProperty') do
+        property_name = ThemeSelector::BUTTON_UI[/<property name="([^"]+)">/, 1]
+        Gtk::AccessibleProperty.values.map(&:nick).include?(property_name)
+      end
     end
   end
 

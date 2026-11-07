@@ -89,6 +89,20 @@ module Fixture
     root
   end
 
+  # A root with documentation on it, but none of it Gtk-4.0 — for the case
+  # DocIndex#start_index reports as -1 and Sidebar is supposed to leave
+  # unselected rather than clamp to row 0.
+  def self.write_without_gtk(root)
+    library(
+      root,
+      'glib-2.0',
+      'GLib',
+      '2.0',
+      GLIB_SYMBOLS,
+    )
+    root
+  end
+
   def self.library(root, directory, namespace, version, symbols)
     File.join(root, directory).tap do |path|
       FileUtils.mkdir_p(path)
@@ -299,6 +313,34 @@ Driver.new.tap do |driver|
     .step('the starting namespace is selected') do
       driver.sidebar.reset_sidebar
       Expect.equal(driver.sidebar.browse_view.selection_model.selected, 1, 'the selected row')
+    end
+    # GtkSingleSelection's `autoselect` (true unless set otherwise, and
+    # neither upstream's BrowseView.js nor lib/browse_view.rb sets it false)
+    # reselects row 0 of whatever the model holds the instant nothing is
+    # selected and the model is non-empty — confirmed directly against this
+    # checkout's real Gtk4 typelib, not assumed; see FINDINGS.md. So with
+    # populated docs but no Gtk-4.0 node, GTK itself puts the selection back
+    # on row 0 (here, GLib-2.0) no matter what Sidebar assigns — upstream's
+    # `-1` and this port's sentinel both get overridden the same way. What a
+    # Ruby `Array#[]` would NOT get overridden on is `start_uri`, which is
+    # this port's own addition (upstream hardcodes its default new-tab uri;
+    # see COMPONENT_PARITY.md row 5) — `docs[-1]` there would silently return
+    # the *last* indexed page instead of nil, which is the one thing this
+    # step actually has to prove stayed fixed.
+    .step('no Gtk-4.0 node: GTK autoselects row 0, start_uri stays nil') do
+      Fixture.write_without_gtk(Dir.mktmpdir('biblioteca-fixture-no-gtk')).tap do |no_gtk_root|
+        DocIndex.new(root: no_gtk_root).to_h.tap do |no_gtk_index|
+          Sidebar.new(doc_index: no_gtk_index).tap do |no_gtk_sidebar|
+            no_gtk_sidebar.build
+            Expect.equal(
+              no_gtk_sidebar.browse_view.selection_model.selected,
+              0,
+              'the selected row with populated docs but no Gtk-4.0 namespace',
+            )
+            Expect.equal(no_gtk_sidebar.start_uri, nil, 'start_uri with no Gtk-4.0 namespace')
+          end
+        end
+      end
     end
     .step('search matches a C identifier') do
       driver.sidebar.search_view.tap do |view|

@@ -306,15 +306,24 @@ checker to attach to; `Sidebar.blp`'s search entry is a plain
 
 `Xdp` (the GI namespace `ashpd` is the Rust-native equivalent of) appears only
 in `src/bin.js:6,19`, where `Xdp.Portal.running_under_flatpak()` refuses to
-start outside Flatpak. `lib/package.rb`'s class comment already explains why
-this port does not replicate that guard: it is a gem, installed by RubyGems or
-run from a checkout, so there is no sandbox to require and the guard would
-reject every supported way of running it. That is a documented design
-decision from before this round, not a gap this round's gem-wiring closes —
-inventing a new "open externally through the portal" feature nowhere in
-upstream's `WebView.js`/`Sidebar.js` navigation handling, just to have
-somewhere to call `Ashpd::OpenUri.open`, would be adding behaviour the spec
-does not have rather than porting it.
+start outside Flatpak. Stated plainly: that literal check is not implemented
+in this port, and cannot be — the port is a gem, installed by RubyGems or run
+from a checkout, so there is no Flatpak sandbox for `running_under_flatpak()`
+to detect. Until this round, nothing stood in for it at all, which is a
+missing feature, not a settled decision — the app opened on a permanently
+empty sidebar with no explanation on a machine with no GNOME API docs
+installed, exactly the failure mode upstream's guard exists to head off.
+
+This round adds `exe/biblioteca`'s own startup refusal, built on the one
+condition this port can check in its place: `DocIndex.default_root` finding no
+documentation root at all. It prints the same kind of message upstream's
+`console.error` does and calls `exit(1)`, so the port now refuses to start
+rather than opening uselessly — not the Flatpak check ported, because there is
+nothing to port it to, but the gap it left (an app that starts and shows
+nothing) closed on these terms. Inventing a new "open externally through the
+portal" feature nowhere in upstream's `WebView.js`/`Sidebar.js` navigation
+handling, just to have somewhere to call `Ashpd::OpenUri.open`, would still be
+adding behaviour the spec does not have, and this round does not do that.
 
 Both gems are real dependencies, proven to load, kept in the lockfile and the
 flake's typelib path, ready for the day a future upstream commit adds a text
@@ -324,3 +333,90 @@ hand-rolled substitute removed, because none existed.
 
 **Reported upstream:** n/a — not a port divergence, a gap in what upstream's
 own source calls.
+
+---
+
+## 11. `GtkSingleSelection.autoselect` overrides the -1 both the port and upstream assign
+
+**Where it bit:** `lib/sidebar.rb#start_index`/`#selection_index`.
+`doc_index['start_index']` is `-1` when the GTK docs are not indexed
+(`lib/doc_index.rb#start_index`). An earlier round of this port clamped that
+to `0` before assigning it to `browse_view.selection_model.selected`, read as
+a divergence from upstream's `src/sidebar/Sidebar.js:59`, which assigns the
+raw `-1` and (so the reasoning went) therefore leaves nothing selected.
+
+**What actually happens, verified against this checkout's real GTK4 typelib
+(the same C `GtkSingleSelection` GJS binds too, not a Ruby-bindings quirk):**
+`GtkSingleSelection:autoselect` defaults to `true`, and neither
+`src/sidebar/BrowseView.js#createBrowseSelectionModel` nor
+`lib/browse_view.rb#selection_model` sets it to `false` — both set only
+`can-unselect`. With `autoselect` true, assigning any out-of-range or
+`GTK_INVALID_LIST_POSITION` value to `selected` on a non-empty model is
+immediately overridden back to row 0:
+
+```ruby
+require 'gtk4'
+store = Gio::ListStore.new(Gtk::StringObject)
+store.append(Gtk::StringObject.new('a'))
+sel = Gtk::SingleSelection.new(store)
+sel.can_unselect = true
+sel.selected = 0xFFFFFFFF   # GTK_INVALID_LIST_POSITION
+sel.selected                # => 0, not 0xFFFFFFFF
+```
+
+So upstream's `-1` and this port's sentinel both land on row 0 whenever the
+tree holds anything at all — they were never actually divergent in what the
+sidebar shows. The only place a negative `start_index` was genuinely mishandled
+was `Sidebar#start_uri`, which indexed `docs[start_index]` directly: Ruby's
+negative indexing turned `-1` into "the *last* page in the index", not "no
+page", which upstream's own equivalent concept does not have (`start_uri` is
+this port's addition, replacing the Flatpak-only hardcoded default new-tab uri
+— see `COMPONENT_PARITY.md` row 5). That is fixed; the selection assignment is
+kept as a sentinel for correctness in principle, with this finding attached so
+a future reader does not reach for `autoselect = false` to "fix" something
+that was never actually broken on screen, which would itself be a new
+divergence from upstream neither file asks for.
+
+**Reported upstream:** no — intended GTK behaviour, not a defect.
+
+---
+
+## 12. Upstream bugs, newly observable: both AppStream validators reject `data/app.metainfo.xml` as upstream wrote it
+
+**Where it bit:** `rake data:validate`. `desktop-file-utils`, `appstream` and
+`appstream-glib` were all missing from the Nix devshell until this round
+(TEST_PARITY.md), so this check had never actually run anything. With all
+three present:
+
+```
+$ appstreamcli validate --no-net data/app.metainfo.xml
+I: org.rubygtkproject.Biblioteca:38: nonstandard-gnome-extension kudos
+W: org.rubygtkproject.Biblioteca:57: invalid-iso8601-date 2026-09-xx
+
+$ appstream-util validate data/app.metainfo.xml
+• style-invalid     : <image> has vertical padding [...screenshot.png]
+• style-invalid     : <image> has horizontal padding [...screenshot.png]
+• attribute-missing : <release> has no timestamp
+• style-invalid     : <ul> cannot start a description [(null)]
+• style-invalid     : Not enough <p> tags for a good description [0/1]
+```
+
+**What it is:** every one of these — the placeholder release date
+`date="2026-09-xx"` at line 57, the `<ul>`-first description, the thin
+`<p>` count, the unspecified `<release>` timestamp, the screenshot's padding —
+is upstream's own content. `diff` against `git show
+origin/main:data/app.metainfo.xml` (normalised for `@app_id@`) is empty: this
+port's `data/app.metainfo.xml` is upstream's file with the app id substituted
+and nothing else, so every one of these is an upstream defect surfacing for
+the first time because the port's tooling can finally see it, not something
+this round introduced.
+
+**What the port does instead:** nothing — the text is kept exactly as
+upstream wrote it, rather than "fixed" by diverging from the spec. `rake
+data:validate` is therefore not wired into `rake default`; it is run on its
+own, where its non-zero exit is the accurate, honest result rather than
+something that would make every other CI run fail for upstream content this
+port does not own.
+
+**Reported upstream:** no — not yet filed against
+<https://github.com/workbenchdev/Biblioteca/issues>.

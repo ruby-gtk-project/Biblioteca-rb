@@ -189,12 +189,16 @@
             # resolves against the copied tree.
             install -Dm755 exe/${launcher} $out/share/Biblioteca/exe/${launcher}
 
-            # Compile any GSettings schema the port ships.
-            if [ -d data/schemas ]; then
-              mkdir -p $out/share/glib-2.0/schemas
-              cp data/schemas/*.gschema.xml $out/share/glib-2.0/schemas/
-              ${pkgs.glib.dev}/bin/glib-compile-schemas $out/share/glib-2.0/schemas
-            fi
+            # Compile the GSettings schema the port ships. Unconditional, not
+            # gated on a pre-existing data/schemas — that directory is only
+            # ever produced by a developer running `rake schema:compile` by
+            # hand, and a build that skips it silently ships no compiled
+            # schema at all, which is what made the schema only reachable
+            # after that manual step. The source of truth is
+            # data/app.gschema.xml, which is always in the tree.
+            mkdir -p $out/share/glib-2.0/schemas
+            cp data/app.gschema.xml $out/share/glib-2.0/schemas/org.rubygtkproject.Biblioteca.gschema.xml
+            ${pkgs.glib.dev}/bin/glib-compile-schemas $out/share/glib-2.0/schemas
 
             # -rbundler/setup puts the bundled gems on the load path, and
             # GI_TYPELIB_PATH keeps GObject-Introspection from re-registering
@@ -245,6 +249,15 @@
             pkgs.xvfb-run
             pkgs.gsettings-desktop-schemas
             pkgs.adwaita-icon-theme
+            # `rake data:validate` shells out to these and silently skips
+            # whichever one is missing; without them the task ran and
+            # validated nothing. appstream-glib is `appstream-util`, the
+            # older, stricter validator Flathub itself gates on
+            # (upstream's data/meson.build:38) — a different binary from
+            # `appstream`'s `appstreamcli`, not a duplicate.
+            pkgs.desktop-file-utils
+            pkgs.appstream
+            pkgs.appstream-glib
           ] ++ gtkStack;
 
           # Icons, GSettings schemas and the GTK portal all resolve through
@@ -256,7 +269,14 @@
             # platform asks bundler for a gem which is not there.
             export BUNDLE_FORCE_RUBY_PLATFORM=false
             export RUBYLIB="$PWD/lib''${RUBYLIB:+:$RUBYLIB}"
-            [ -d data/schemas ] && export GSETTINGS_SCHEMA_DIR="$PWD/data/schemas"
+            # Compiled on every shell entry, not left for a developer to
+            # remember `rake schema:compile` — otherwise the schema is only
+            # reachable after that manual step and Settings silently falls
+            # back to its per-process JSON file instead.
+            mkdir -p data/schemas
+            cp data/app.gschema.xml data/schemas/org.rubygtkproject.Biblioteca.gschema.xml
+            ${pkgs.glib.dev}/bin/glib-compile-schemas data/schemas
+            export GSETTINGS_SCHEMA_DIR="$PWD/data/schemas"
             unset BUNDLE_GEMFILE BUNDLE_FROZEN
             echo "Biblioteca devshell — ruby $(ruby -e 'print RUBY_VERSION')"
             echo "run the app:   xvfb-run ruby exe/biblioteca"

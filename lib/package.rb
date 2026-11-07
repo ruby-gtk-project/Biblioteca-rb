@@ -21,9 +21,12 @@ require 'glib2'
 #     (`Xdp.Portal.running_under_flatpak()`). This port is a gem, installed by
 #     RubyGems and run from a checkout or from the system Ruby, so there is no
 #     sandbox to require and the guard would reject every supported way of
-#     running it. Nothing replaces it: the port reads documentation from
-#     whichever root DocIndex::DEFAULT_ROOTS finds (lib/doc_index.rb:34-40)
-#     instead of assuming /app.
+#     running it. That condition is not replicated — there is nothing to
+#     check — but exe/biblioteca refuses to start on the condition this port
+#     can check instead: no GTK/GNOME API documentation installed anywhere
+#     DocIndex::DEFAULT_ROOTS looks (lib/doc_index.rb:34-40). Without that
+#     guard the app opens on a permanently empty sidebar with no explanation,
+#     which is the same failure upstream's guard exists to head off.
 #   * src/application.js:11 sets `resource_base_path: "/app/drey/Biblioteca"`
 #     so that the Devel build loads its GResource from the release build's
 #     prefix. This port ships no GResource — the stylesheet is a heredoc

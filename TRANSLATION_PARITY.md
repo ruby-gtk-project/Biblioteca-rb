@@ -9,7 +9,7 @@
 | Produced by the port | **61 / 61** |
 | Extra keys in the port | 3 (troll's, see below) |
 | Languages upstream | 0 |
-| Languages in the port | 0 |
+| Languages in the port | 1 (`fr`, complete: 64 / 64 messages) |
 | Domain | `org.rubygtkproject.Biblioteca` |
 | Template | `po/org.rubygtkproject.Biblioteca.pot` — 64 messages |
 
@@ -106,14 +106,30 @@ and the template's keys compared against a census of upstream's `_("…")` calls
 plus `data/app.desktop` and `data/app.metainfo.xml`: 61 of 61 present, 0
 missing, 3 extra (troll's).
 
-Nothing has been checked against a compiled `.mo`, because there are no `.po`
-files and the `gettext` gem is not installed in this checkout. That `_()`
-returns the msgid when no catalogue is bound is the gem's documented
-behaviour, not something observed here.
+Updated this round — both are now closed:
+
+**TP-2.** `po/fr.po` is a real, complete French catalogue: all 64 messages
+`po/org.rubygtkproject.Biblioteca.pot` carries, translated, not a stub with a
+handful filled in. `spec/translation_spec.rb` compiles it with
+`GetText::Tools::MsgFmt` into `locale/fr/LC_MESSAGES/` (the exact path
+`Package.locale_dir` resolves to), sets `Locale.current = "fr"`, and asserts
+that a class built the same way every real `lib/*.rb` class is —
+`include Package::Translatable`, then `_('Main Menu')` — returns
+`"Menu principal"`, not the msgid; a second expectation pins the documented
+fallback-to-msgid behaviour for a locale with no catalogue (`"xx"`). Both pass
+under `rspec` (see TEST_PARITY.md). The lookup path — `Package.locale_dir` →
+`<lang>/LC_MESSAGES/org.rubygtkproject.Biblioteca.mo` → a translated string
+back from `_()` — is now exercised, not assumed.
+
+**TP-1.** `rake gettext:check_pot_drift` (`rakelib/biblioteca.rake`) runs
+`rake gettext:pot` and then `git diff --exit-code -- po/`, exactly what this
+row originally asked for, and is wired into `rake default`
+(`rakelib/default.rake`) and the CI workflow
+(`.github/workflows/ci.yml`). Running it for the first time found real drift —
+two `#:` location comments in `lib/theme_selector.rb` had moved — regenerated
+and committed in this round's commit.
 
 ## Still owed
 
-1. A `.po` for at least one language, so that the lookup path —
-   `Package.locale_dir` → `<lang>/LC_MESSAGES/org.rubygtkproject.Biblioteca.mo`
-   → a translated string on screen — is exercised once rather than assumed.
-2. `po/LINGUAS`, once there is more than one.
+1. `po/LINGUAS`, once there is more than one `.po`.
+2. A second language, so `po/LINGUAS` has something to list.

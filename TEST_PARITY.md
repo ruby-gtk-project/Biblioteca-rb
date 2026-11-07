@@ -65,29 +65,60 @@ nothing upstream to be at parity with.
 
 ## Verification status
 
-**The specs have not been run under RSpec.** `bundle exec rspec` reports
-`command not found: rspec`: neither `rspec` nor `kettle-test` is installed in
-this checkout, and `bundle install` needs the network. `ruby -c` passes on
-both files.
+Updated this round: this is no longer true. `rspec` (from the Nix devshell's
+`pkgs.rubyPackages_3_4.rspec`) runs the full suite under the real runner —
+`spec/doc_index_spec.rb`, `spec/fzy_spec.rb` and the new
+`spec/translation_spec.rb` (see TRANSLATION_PARITY.md TP-2) — and it passes:
+**38 examples, 0 failures**, replayed on this checkout with
+`nix develop --command ruby -e 'require "rspec/core"; exit
+RSpec::Core::Runner.run(["--format", "progress", "--require", "spec_helper",
+"spec"])'`. The `around` / `be_within` / `:extra` plumbing every one of those
+specs relies on has therefore been exercised, not just read.
 
-Every expectation in both files was derived from the implementation's actual
-output rather than written from the source by eye, and then checked: all 20
-`doc_index_spec.rb` expectations were replayed outside RSpec, against the same
-fixture, and all 20 matched; the `fzy_spec.rb` numbers are `Fzy.score`'s own
-output for those inputs.
+`rake default` (`rakelib/default.rake`) now wires this suite, RuboCop (when a
+RuboCop that actually resolves against this gemset is on `PATH` — it skips
+loudly otherwise, rather than silently succeeding against the wrong bundle),
+`rake schema:validate`, `rake gettext:check_pot_drift` (TP-1) and all three
+headless UI drivers (`test/drive_app.rb`, `test/drive_sidebar.rb`,
+`test/drive_biblioteca.rb`) into one task, run end to end under
+`xvfb-run -a -s '-screen 0 1600x1200x24' rake default`. A CI workflow
+(`.github/workflows/ci.yml`) runs exactly that on every push to `ruby` and
+every pull request — there was no workflow of any kind checked in before this
+round.
 
-That is still not a green suite. A spec nobody has run under its runner is a
-claim about the runner as well as about the code, and the `around` /
-`be_within` / `:extra` plumbing has not been exercised.
+`rake data:validate` is fixed in the same round: `desktop-file-utils`,
+`appstream` and `appstream-glib` (`appstream-util`, the stricter Flathub
+validator — see `.reports/test-parity.md`'s gap 3) are now in the Nix devshell
+(`flake.nix`), so the task no longer runs and validates nothing. Running it
+for the first time found a real bug —
+`desktop-file-validate`'s `DBusActivatable=true` check reads the reverse-DNS
+id out of the *filename*, and `data/app.desktop` is named generically pending
+the id substitution `rake data:install` does — fixed by validating a
+throwaway copy under the installed basename instead of the raw file
+(`rakelib/biblioteca.rake`). `rake data:validate` now runs `appstream-util
+validate` too (test-parity gap 3, previously no port counterpart at all), and
+both AppStream validators fail — `appstreamcli` on
+`data/app.metainfo.xml`'s `date="2026-09-xx"` release-date placeholder,
+`appstream-util` on the screenshot's padding, the `<ul>`-first description,
+the thin `<p>` count and the unspecified release timestamp — all of it
+byte-for-byte upstream's own content (`git show
+origin/main:data/app.metainfo.xml`), not something this port introduced
+(FINDINGS.md #12). Not "fixed" by diverging from upstream's text, and not
+wired into `rake default` for that reason — `rake data:validate` is run on
+its own, and its exit code is accurate rather than always-zero.
 
 ## Still owed
 
-1. Run them. `bundle install`, then `bundle exec rspec`.
-2. `spec/browse_view_spec.rb` — `BrowseView#item_index` is the tree-path
+1. `spec/browse_view_spec.rb` — `BrowseView#item_index` is the tree-path
    arithmetic that turns "the web view is showing this uri" into "select this
    row", and it is the most intricate pure method in the port. It walks a
-   `Gtk::TreeListModel`, so a spec for it needs the `gtk4` gem at load time;
-   not written this round.
-3. `spec/search_view_spec.rb` — `QUERY_TYPES` / `QUERY_PATTERN` prefix parsing
+   `Gtk::TreeListModel`, so a spec for it needs the `gtk4` gem at load time —
+   doable now that the suite runs under a real GTK process via the devshell,
+   but not written this round.
+2. `spec/search_view_spec.rb` — `QUERY_TYPES` / `QUERY_PATTERN` prefix parsing
    and the smart-case rule. `lib/search_view.rb` requires `adwaita` at load
    time, so the same applies; not written this round.
+3. `rake data:validate`'s AppStream findings above (FINDINGS.md #12):
+   upstream's own content has not been reported upstream.
+4. `flatpak-builder-lint` on the manifests — still no port counterpart
+   because no manifest exists (COMPONENT_PARITY.md gap 2).

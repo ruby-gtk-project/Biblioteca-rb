@@ -179,19 +179,19 @@ msgstr ""
 msgid "Close Search"
 msgstr ""
 
-#: lib/sidebar.rb:119
+#: lib/sidebar.rb:128
 msgid "Main Menu"
 msgstr ""
 
-#: lib/sidebar.rb:143
+#: lib/sidebar.rb:152
 msgid "Search Biblioteca"
 msgstr ""
 
-#: lib/sidebar.rb:155
+#: lib/sidebar.rb:164
 msgid "No Results Found"
 msgstr ""
 
-#: lib/sidebar.rb:156
+#: lib/sidebar.rb:165
 msgid "Try a different search term"
 msgstr ""
 
@@ -239,15 +239,15 @@ msgstr ""
 msgid "About Biblioteca"
 msgstr ""
 
-#: lib/theme_selector.rb:53
+#: lib/theme_selector.rb:57
 msgid "Follow system style"
 msgstr ""
 
-#: lib/theme_selector.rb:54
+#: lib/theme_selector.rb:58
 msgid "Light style"
 msgstr ""
 
-#: lib/theme_selector.rb:55
+#: lib/theme_selector.rb:59
 msgid "Dark style"
 msgstr ""
 

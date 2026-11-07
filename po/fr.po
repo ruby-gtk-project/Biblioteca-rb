@@ -1,0 +1,272 @@
+# French translation of Biblioteca.
+# Generated from po/org.rubygtkproject.Biblioteca.pot; feel free to edit by hand.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Biblioteca\n"
+"Report-Msgid-Bugs-To: https://biblioteca.sonny.re/feedback\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: fr\n"
+
+#: data/app.desktop:4
+msgid "Learn and prototype with GNOME technologies"
+msgstr "Apprendre et prototyper avec les technologies GNOME"
+
+#: data/app.metainfo.xml
+msgid "Read GNOME documentation offline"
+msgstr "Lire la documentation GNOME hors ligne"
+
+#: data/app.metainfo.xml
+msgid "Biblioteca main window with GTK 4 docs selected"
+msgstr "Fenêtre principale de Biblioteca avec la documentation GTK 4 sélectionnée"
+
+#: data/app.metainfo.xml
+msgid "Biblioteca lets you browse and read GNOME documentation. Among other things, Biblioteca comes with"
+msgstr "Biblioteca vous permet de parcourir et de lire la documentation GNOME. Entre autres choses, Biblioteca propose"
+
+#: data/app.metainfo.xml
+msgid "Offline documentation"
+msgstr "Documentation hors ligne"
+
+#: data/app.metainfo.xml
+msgid "Web browsing"
+msgstr "Navigation web"
+
+#: data/app.metainfo.xml
+#: data/ui/shortcuts.ui:26
+msgid "Tabs"
+msgstr "Onglets"
+
+#: data/app.metainfo.xml
+msgid "Dark mode support"
+msgstr "Prise en charge du mode sombre"
+
+#: data/app.metainfo.xml
+msgid "Fuzzy search"
+msgstr "Recherche approximative"
+
+#: data/app.metainfo.xml
+msgid "Mobile / adaptive"
+msgstr "Mobile / adaptatif"
+
+#: data/ui/shortcuts.ui:29
+msgid "Open tab"
+msgstr "Ouvrir un onglet"
+
+#: data/ui/shortcuts.ui:35
+msgid "Close tab"
+msgstr "Fermer l'onglet"
+
+#: data/ui/shortcuts.ui:41
+msgid "Switch to the next tab"
+msgstr "Passer à l'onglet suivant"
+
+#: data/ui/shortcuts.ui:47
+msgid "Switch to the previous tab"
+msgstr "Passer à l'onglet précédent"
+
+#: data/ui/shortcuts.ui:53
+msgid "Switch to the first tab"
+msgstr "Passer au premier onglet"
+
+#: data/ui/shortcuts.ui:59
+msgid "Switch to the last tab"
+msgstr "Passer au dernier onglet"
+
+#: data/ui/shortcuts.ui:65
+msgid "View all open tabs"
+msgstr "Afficher tous les onglets ouverts"
+
+#: data/ui/shortcuts.ui:71
+msgid "Move current tab backward"
+msgstr "Déplacer l'onglet actuel vers l'arrière"
+
+#: data/ui/shortcuts.ui:77
+msgid "Move current tab forward"
+msgstr "Déplacer l'onglet actuel vers l'avant"
+
+#: data/ui/shortcuts.ui:83
+msgid "Move current tab at the start"
+msgstr "Déplacer l'onglet actuel au début"
+
+#: data/ui/shortcuts.ui:89
+msgid "Move current tab at the end"
+msgstr "Déplacer l'onglet actuel à la fin"
+
+#: data/ui/shortcuts.ui:95
+msgid "Switch to tabs 1⋯10"
+msgstr "Passer aux onglets 1⋯10"
+
+#: data/ui/shortcuts.ui:103
+msgid "Navigation"
+msgstr "Navigation"
+
+#: data/ui/shortcuts.ui:106
+#: data/ui/shortcuts.ui:149
+msgid "Go back to the previous page"
+msgstr "Revenir à la page précédente"
+
+#: data/ui/shortcuts.ui:112
+#: data/ui/shortcuts.ui:155
+msgid "Go forward to the next page"
+msgstr "Aller à la page suivante"
+
+#: data/ui/shortcuts.ui:118
+msgid "Focus global search"
+msgstr "Activer la recherche globale"
+
+#: data/ui/shortcuts.ui:124
+msgid "Find in page"
+msgstr "Rechercher dans la page"
+
+#: data/ui/shortcuts.ui:130
+msgid "Find next match"
+msgstr "Trouver l'occurrence suivante"
+
+#: data/ui/shortcuts.ui:136
+msgid "Find previous match"
+msgstr "Trouver l'occurrence précédente"
+
+#: data/ui/shortcuts.ui:142
+msgid "Focus URL bar"
+msgstr "Activer la barre d'adresse"
+
+#: data/ui/shortcuts.ui:162
+msgid "Zoom"
+msgstr "Zoom"
+
+#: data/ui/shortcuts.ui:165
+#: lib/zoom_buttons.rb:65
+msgid "Zoom in"
+msgstr "Zoomer"
+
+#: data/ui/shortcuts.ui:171
+#: lib/zoom_buttons.rb:54
+msgid "Zoom out"
+msgstr "Dézoomer"
+
+#: data/ui/shortcuts.ui:177
+msgid "Reset zoom"
+msgstr "Réinitialiser le zoom"
+
+#: data/ui/shortcuts.ui:185
+msgid "General"
+msgstr "Général"
+
+#: data/ui/shortcuts.ui:188
+msgid "Show sidebar"
+msgstr "Afficher le panneau latéral"
+
+#: data/ui/shortcuts.ui:194
+msgid "Shortcuts"
+msgstr "Raccourcis"
+
+#: lib/about_dialog.rb:58
+msgid "Contributors"
+msgstr "Contributeurs"
+
+#: lib/find_overlay.rb:178
+msgid "Show Previous Result"
+msgstr "Afficher le résultat précédent"
+
+#: lib/find_overlay.rb:186
+msgid "Show Next Result"
+msgstr "Afficher le résultat suivant"
+
+#: lib/find_overlay.rb:194
+msgid "Close Search"
+msgstr "Fermer la recherche"
+
+#: lib/sidebar.rb:128
+msgid "Main Menu"
+msgstr "Menu principal"
+
+#: lib/sidebar.rb:152
+msgid "Search Biblioteca"
+msgstr "Rechercher dans Biblioteca"
+
+#: lib/sidebar.rb:164
+msgid "No Results Found"
+msgstr "Aucun résultat trouvé"
+
+#: lib/sidebar.rb:165
+msgid "Try a different search term"
+msgstr "Essayez un autre terme de recherche"
+
+#: lib/sidebar_menu.rb:27
+msgid "Bookmarks"
+msgstr "Signets"
+
+#: lib/sidebar_menu.rb:30
+msgid "Developer Documentation"
+msgstr "Documentation pour développeurs"
+
+#: lib/sidebar_menu.rb:31
+msgid "Human Interface Guidelines"
+msgstr "Lignes directrices d'interface humaine"
+
+#: lib/sidebar_menu.rb:32
+msgid "JavaScript"
+msgstr "JavaScript"
+
+#: lib/sidebar_menu.rb:33
+msgid "Vala"
+msgstr "Vala"
+
+#: lib/sidebar_menu.rb:34
+msgid "Rust"
+msgstr "Rust"
+
+#: lib/sidebar_menu.rb:35
+msgid "Python"
+msgstr "Python"
+
+#: lib/sidebar_menu.rb:36
+msgid "Blueprint"
+msgstr "Blueprint"
+
+#: lib/sidebar_menu.rb:37
+msgid "DevDocs"
+msgstr "DevDocs"
+
+#: lib/sidebar_menu.rb:41
+msgid "Keyboard Shortcuts"
+msgstr "Raccourcis clavier"
+
+#: lib/sidebar_menu.rb:42
+msgid "About Biblioteca"
+msgstr "À propos de Biblioteca"
+
+#: lib/theme_selector.rb:57
+msgid "Follow system style"
+msgstr "Suivre le style du système"
+
+#: lib/theme_selector.rb:58
+msgid "Light style"
+msgstr "Style clair"
+
+#: lib/theme_selector.rb:59
+msgid "Dark style"
+msgstr "Style sombre"
+
+#: lib/window.rb:58
+msgid "Documentation"
+msgstr "Documentation"
+
+#: lib/window.rb:342
+msgid "Open Sidebar"
+msgstr "Ouvrir le panneau latéral"
+
+#: lib/window.rb:357
+msgid "Back"
+msgstr "Précédent"
+
+#: lib/window.rb:366
+msgid "Forward"
+msgstr "Suivant"
+
+#: lib/window.rb:375
+msgid "New Tab"
+msgstr "Nouvel onglet"

@@ -12,6 +12,7 @@
 # each tool looks for.
 
 require "fileutils"
+require "tmpdir"
 
 APP_ID = "org.rubygtkproject.Biblioteca"
 DATA_DIR = File.join(__dir__, "..", "data")
@@ -126,10 +127,27 @@ namespace :data do
 
   desc "Validate the installed-file templates with the freedesktop tools, when present"
   task :validate do
+    desktop_file_validate_ran = false
+    appstreamcli_ran = false
+
     if system("which desktop-file-validate > /dev/null 2>&1")
-      sh("desktop-file-validate", File.join(DATA_DIR, "app.desktop"))
+      desktop_file_validate_ran = true
+      # desktop-file-validate's `DBusActivatable=true` check reads the
+      # reverse-DNS id out of the *filename*, not the file's content, and
+      # data/app.desktop is named generically so the install step can
+      # substitute the id-derived basename at `rake data:install` time
+      # (data:desktop above). Validating it under its installed name, in a
+      # throwaway copy, is what actually exercises that check instead of
+      # failing it on every run.
+      Dir.mktmpdir do |dir|
+        validated = File.join(dir, "#{APP_ID}.desktop")
+        FileUtils.cp(File.join(DATA_DIR, "app.desktop"), validated)
+        sh("desktop-file-validate", validated)
+      end
     end
+
     if system("which appstreamcli > /dev/null 2>&1")
+      appstreamcli_ran = true
       sh(
         "appstreamcli",
         "validate",
@@ -137,6 +155,26 @@ namespace :data do
         "--no-net",
         File.join(DATA_DIR, "app.metainfo.xml"),
       )
+    end
+
+    # `appstream-util validate` (appstream-glib) is the second, stricter
+    # AppStream validator — the one Flathub itself gates on
+    # (upstream's data/meson.build:38, Makefile:43) — a different binary from
+    # `appstreamcli` above, not a duplicate of it.
+    appstream_util_ran = false
+    if system("which appstream-util > /dev/null 2>&1")
+      appstream_util_ran = true
+      sh("appstream-util", "validate", File.join(DATA_DIR, "app.metainfo.xml"))
+    end
+
+    unless desktop_file_validate_ran
+      puts "SKIPPED: desktop-file-validate not found on PATH"
+    end
+    unless appstreamcli_ran
+      puts "SKIPPED: appstreamcli not found on PATH"
+    end
+    unless appstream_util_ran
+      puts "SKIPPED: appstream-util not found on PATH"
     end
   end
 end
@@ -167,6 +205,31 @@ namespace :gettext do
           FileUtils.mkdir_p(dir)
           GetText::Tools::MsgFmt.run(po, "-o", File.join(dir, "#{APP_ID}.mo"))
         end
+      end
+    end
+  end
+
+  desc "Fail if po/#{APP_ID}.pot has drifted from what POTFILES.in produces (TP-1)"
+  task :check_pot_drift do
+    # po/extract.rb's output is a pure function of POTFILES.in's sources and
+    # carries no timestamp (see its header), so regenerating in place and
+    # diffing is exactly the drift check TRANSLATION_PARITY.md (TP-1) asks
+    # for — not a reimplementation, the literal `rake gettext:pot && git diff
+    # --exit-code po/` it specifies.
+    Rake::Task["gettext:pot"].invoke
+    sh(
+      "git",
+      "diff",
+      "--exit-code",
+      "--",
+      PO_DIR,
+    ) do |ok, _res|
+      unless ok
+        abort(
+          "po/#{APP_ID}.pot has drifted from po/POTFILES.in — regenerated it " \
+          "in place (above); review the diff and commit it " \
+          "(TP-1, TRANSLATION_PARITY.md)",
+        )
       end
     end
   end

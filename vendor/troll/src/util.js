@@ -1,0 +1,136 @@
+import GLib from "gi://GLib";
+import Gio from "gi://Gio";
+import system from "system";
+
+export function getGIRepositoryVersion(repo) {
+  const {
+    get_major_version = () => "?",
+    get_minor_version = () => "?",
+    get_micro_version = () => "?",
+  } = repo;
+  return `${get_major_version()}.${get_minor_version()}.${get_micro_version()}`;
+}
+
+export function getGLibVersion() {
+  return `${GLib.MAJOR_VERSION}.${GLib.MINOR_VERSION}.${GLib.MICRO_VERSION}`;
+}
+
+export function getGjsVersion() {
+  const v = system.version.toString();
+  return `${v[0]}.${+(v[1] + v[2])}.${+(v[3] + v[4])}`;
+}
+
+export function getPid() {
+  const credentials = new Gio.Credentials();
+  return credentials.get_unix_pid();
+}
+
+export function parseResolve(base, uri_ref) {
+  const flags = GLib.UriFlags.NONE;
+  return GLib.Uri.parse(base, flags).parse_relative(uri_ref, flags);
+}
+
+export function resolve(base, uri_ref) {
+  return parseResolve(base, uri_ref).to_string();
+}
+
+export function debounce(func, timeout) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      func(...args);
+    }, timeout);
+  };
+}
+
+/*
+Requires a gsettings schema with
+<key name="window-width" type="i">
+  <default>0</default>
+</key>
+<key name="window-height" type="i">
+  <default>0</default>
+</key>
+<key name="window-maximized" type="b">
+  <default>false</default>
+</key>
+<key name="window-fullscreened" type="b">
+  <default>false</default>
+</key>
+*/
+export function persistWindowState({ settings, window }) {
+  settings.bind(
+    "window-maximized",
+    window,
+    "maximized",
+    Gio.SettingsBindFlags.DEFAULT,
+  );
+  settings.bind(
+    "window-fullscreened",
+    window,
+    "fullscreened",
+    Gio.SettingsBindFlags.DEFAULT,
+  );
+
+  // Resizing the window triggers a lot of notify signals
+  // so we use a debounced function instead of settings.bind
+  const onSizeChanged = debounce(() => {
+    settings.set_int("window-width", window.default_width);
+    settings.set_int("window-height", window.default_height);
+  }, 300);
+  window.connect("notify::default-width", onSizeChanged);
+  window.connect("notify::default-height", onSizeChanged);
+  const width = settings.get_int("window-width");
+  const height = settings.get_int("window-height");
+  if (width && height) {
+    window.default_width = width;
+    window.default_height = height;
+  }
+}
+
+export async function rmrf(file) {
+  Gio._promisify(Gio.File.prototype, "query_info_async");
+  Gio._promisify(Gio.File.prototype, "enumerate_children_async");
+  Gio._promisify(Gio.File.prototype, "delete_async");
+  Gio._promisify(Gio.FileEnumerator.prototype, "close_async");
+
+  const cancellable = null;
+  const priority = GLib.PRIORITY_DEFAULT;
+
+  const info = await file.query_info_async(
+    "standard::type",
+    Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS,
+    priority,
+    cancellable,
+  );
+
+  if (info.get_file_type() === Gio.FileType.DIRECTORY) {
+    const iter = await file.enumerate_children_async(
+      "standard::name",
+      Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS,
+      priority,
+      cancellable,
+    );
+
+    try {
+      for await (const info of iter) {
+        const child = iter.get_child(info);
+        await rmrf(child);
+      }
+    } finally {
+      try {
+        await iter.close_async(priority, cancellable);
+        // eslint-disable-next-line no-empty
+      } catch {}
+    }
+  }
+
+  try {
+    await file.delete_async(priority, cancellable);
+  } catch (err) {
+    if (err.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND)) return;
+
+    throw err;
+  }
+}

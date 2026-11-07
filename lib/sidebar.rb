@@ -85,7 +85,7 @@ class Sidebar
   # Upstream calls this when the window is presented for the first time.
   def reset_sidebar
     browse_view.collapse_all_rows
-    browse_view.selection_model.selected = start_index
+    browse_view.selection_model.selected = selection_index
     search_entry.text = ''
     stack.visible_child_name = BROWSE
   end
@@ -93,9 +93,18 @@ class Sidebar
   # The uri of the namespace the sidebar opens on — Gtk-4.0 — read out of the
   # index that has already been built, so the window can open its first tab on
   # a page that exists on this machine. nil when the GTK documentation is not
-  # installed, which is the same thing DocIndex#start_index reports as -1.
+  # installed, which is the same thing DocIndex#start_index reports as -1 —
+  # guarded here rather than indexed directly, because Ruby's negative
+  # indexing would otherwise silently hand back the *last* entry in `docs`
+  # (see FINDINGS.md #11 — this guard is the one place the -1 case actually
+  # changes anything observable; GTK's own selection model overrides it
+  # everywhere else).
   def start_uri
-    doc_index.fetch('docs', [])[start_index].then { |item| item&.fetch('uri', nil) }
+    if start_index.negative?
+      nil
+    else
+      doc_index.fetch('docs', [])[start_index]&.fetch('uri', nil)
+    end
   end
 
   def focus_search
@@ -163,13 +172,25 @@ class Sidebar
 
     def doc_index = @doc_index ||= read_or_build_index
 
-    def start_index
-      doc_index['start_index'].to_i.then do |index|
-        if index.negative?
-          0
-        else
-          index
-        end
+    # Upstream's doc_index.start_index (src/sidebar/Sidebar.js:59): -1 when
+    # the Gtk-4.0 namespace is not indexed, unclamped here (an earlier round
+    # clamped it to 0, which `start_uri` below showed to be the one place
+    # that actually mattered — see FINDINGS.md #11 for why the on-screen
+    # selection does not).
+    def start_index = doc_index['start_index'].to_i
+
+    # The value `start_index` is translated to for `selection_model.selected=`.
+    # `GtkSingleSelection:autoselect` defaults true and neither upstream's
+    # BrowseView.js nor BrowseView here turns it off, so on a non-empty tree
+    # GTK reselects row 0 the instant anything else is assigned regardless of
+    # what that is — upstream's raw -1 included. The sentinel assigned here
+    # is therefore correct in principle without changing what is shown
+    # (FINDINGS.md #11).
+    def selection_index
+      if start_index.negative?
+        BrowseView::INVALID_POSITION
+      else
+        start_index
       end
     end
 
@@ -182,7 +203,7 @@ class Sidebar
         build_page(browse_view.root_model, item, [index])
       end
 
-      browse_view.selection_model.selected = start_index
+      browse_view.selection_model.selected = selection_index
       search_view.initialize_model(@searchable_pages)
     end
 

@@ -3,4 +3,25 @@
 
 require "biblioteca"
 
+# src/bin.js:27-32 refuses to start unless `Xdp.Portal.running_under_flatpak()`
+# is true. This port is a gem, installed by RubyGems or run from a checkout —
+# see lib/package.rb's class comment for why that guard has no sandbox to
+# require here.
+#
+# The guard is not simply dropped: it is adapted to the one startup condition
+# this port can actually detect and that leaves the app just as useless as a
+# missing sandbox would upstream — no GTK/GNOME API documentation installed
+# anywhere DocIndex looks, which means the sidebar would open and stay empty,
+# forever, with nothing to say why.
+unless DocIndex.default_root
+  warn <<~MESSAGE
+    Biblioteca requires GTK/GNOME API documentation to be installed.
+    None was found under #{DocIndex::DEFAULT_ROOTS.join(", ")}.
+    Install the gi-docgen documentation for the libraries you want to browse
+    (for example, the "gtk4-doc" / "libadwaita-doc" packages on most
+    distributions), then run Biblioteca again.
+  MESSAGE
+  exit(1)
+end
+
 Biblioteca::Application.new.build.run

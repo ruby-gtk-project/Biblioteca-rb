@@ -6,14 +6,28 @@
 | Port | this branch, `ruby` |
 | Reports | `.reports/component-identification.md`, `.reports/component-parity.md`, `.reports/test-parity.md`, `.reports/translation-parity.md`, `.reports/accountability-ensurance.md` |
 | Repo ledgers | `COMPONENT_PARITY.md`, `TEST_PARITY.md`, `TRANSLATION_PARITY.md`, `FINDINGS.md` |
-| Last audit | 2026-11-02, at port commit `d63ee49` |
-| Audit verdict | clean = **false** |
+| Reports last audited | 2026-11-06, at port commit `ced6a5b` |
+| This header regenerated | 2026-11-07, at port commit (this round's, see `git log -1`) |
 
-This is the resume point. It records what exists, what does not, and what the
-audits still hold open. Nothing in this port has been run: the `gtk4`,
-`adwaita`, `webkit-gtk` and `gettext` gems are not installed in this checkout
-(`ruby -e 'require "gtk4"'` → `LoadError`, `bundle exec rspec` → `command not
-found: rspec`). Every claim below is a claim about source text.
+**This header was stale and has been rewritten.** The previous version said
+"Last audit 2026-11-02, at port commit `d63ee49`" and "Nothing in this port
+has been run" — both false by the time they were last read: the `.reports/`
+files themselves (audited 2026-11-06, four days later, at `ced6a5b`) already
+record `394 of 394 drive checks`, `36 examples, 0 failures` and three
+independent re-runs. That gap between what this file claimed and what the
+dated reports next to it already said is itself an accountability finding
+(`.reports/accountability-ensurance.md` F-7) and will not recur if this file
+is regenerated from the reports' own headers each time it is touched, which
+is what the table above now does — its two dates are different because the
+audits and this resume document are not produced by the same pass, and
+pretending they are is exactly the error being corrected.
+
+Current, re-verified this round: `nix develop --command xvfb-run -a -s
+'-screen 0 1600x1200x24' rake default` runs the full RSpec suite (38
+examples), RuboCop, `rake schema:validate`, `rake gettext:check_pot_drift` and
+all three UI drivers (31 / 25 / 394 steps) end to end and exits 0. See
+`TEST_PARITY.md` for the commands and `.github/workflows/ci.yml` for the CI
+job that now runs the same thing on every push.
 
 ## Upstream
 
@@ -26,8 +40,10 @@ with `git show origin/main:<path>`. It is never checked out and never merged.
 
 ## Done
 
-Written, in house style, mapped one upstream source file to one `lib/` file.
-None of it has been drawn in a GTK process.
+Written, in house style, mapped one upstream source file to one `lib/` file,
+and run: `nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' rake
+default` draws every row below in a real GTK process (see "Open gaps" and
+TEST_PARITY.md for the exact counts).
 
 | Port | Upstream |
 |---|---|
@@ -64,73 +80,92 @@ The two upstream `.blp` list-item factories were rebuilt as
 | Upstream | State |
 |---|---|
 | `build-aux/app.drey.Biblioteca.json`, `build-aux/app.drey.Biblioteca.Devel.json`, `build-aux/modules/*.json` | no `build-aux/`, no manifest of any kind in the port. Upstream's only supported distribution |
-| `src/bin.js:27-32` — the Flatpak-required startup refusal | absent, and nothing replaces it. A person with no GNOME docs installed gets an empty sidebar and no explanation |
-| `src/init.js:8` — promisified `Gtk.UriLauncher.prototype.launch` | absent. Dead code upstream (no call site on `origin/main`), recorded rather than excused |
-| `data/meson.build:38` — `appstream-util validate` (the stricter Flathub validator) | no port counterpart |
+| `data/meson.build:38` — `appstream-util validate` (the stricter Flathub validator) | has a port counterpart as of this round — `rake data:validate` runs it — but it fails on upstream's own content (`FINDINGS.md` #12), not a port defect |
 | `Makefile:19-20` — `flatpak-builder-lint` on both manifests | nothing to lint, because of the manifest row above |
+
+`src/bin.js:27-32` (the Flatpak-required startup refusal) and `src/init.js:8`
+(dead code upstream, no call site) have moved out of this table: the former
+now has a port counterpart (`exe/biblioteca`'s doc-root check, see "Open
+gaps" below); the latter stays unported deliberately, since upstream itself
+never calls it.
 
 ## Open gaps
 
-The fleet audit figure for this round is **21 gaps, clean = false**. The
-per-report counts I can read out of `.reports/` sum to 15, so 6 of the 21 are
-not attributable to a report header from this checkout — treat 21 as the
-authority and the breakdown below as incomplete.
+Regenerated from each `.reports/` file's own header, as of its own audit
+(2026-11-06, `ced6a5b`), with what this round (commit after `f938229`) has
+since closed marked inline. These five counts are not summed into one
+headline figure: they come from different axes (components, tests,
+translation, accountability) with different units, and the previous header's
+unreconciled "21 vs. 15" was itself the F-7 finding — a sum presented as
+authoritative that nobody could actually derive from the cited sources is
+worse than five counts kept separate.
 
-* `.reports/component-parity.md` — **7 open.** 1 the Flatpak startup refusal;
-  2 `Gtk.UriLauncher`; 3 Flatpak packaging; 4 theme-selector accessible
-  labels (blocked by `FINDINGS.md` #4 — `gtk_accessible_update_property` has
-  no usable Ruby form); 5 `troll` `ThemeSelector`; 6 `troll`
-  `persistWindowState`; 7 GSettings schema unreachable without
-  `rake schema:compile`, where `lib/settings.rb` falls back to a per-process
-  JSON file that is not cross-process and is invisible to `gsettings`.
-* `.reports/test-parity.md` — **4 gaps**, 3 of 7 upstream checks ported.
-  Gaps: `appstreamcli validate` has no separately runnable task (it shares
-  `rake data:validate` with `desktop-file-validate`, which aborts first);
-  `appstream-util validate` missing; both `flatpak-builder-lint` runs missing.
-* `.reports/translation-parity.md` — **0 gaps** in the key set; all 64 msgids
-  present.
-* `.reports/accountability-ensurance.md` — **4 load-bearing excuses.**
-  (1) `lib/package.rb:46-53` writes the deleted Flatpak refusal up as a design
-  decision; (2) `TEST_PARITY.md` on this branch still says *0 upstream tests,
-  parity met* when there are 7 — the ledger is wrong and must be corrected to
-  match `.reports/test-parity.md`; (3) `COMPONENT_PARITY.md` writes `closed`
-  on 16 of 17 round-2 rows that nothing has run — the state should read
-  `written, unrun` wherever the claim needs a GTK call; (4) `FINDINGS.md` #5
-  and #6 describe upstream bugs the port fixes, and neither bug report has
-  been filed, so the port is carrying a private fork of upstream behaviour.
-
-Two units cannot be checked against the pinned ref at all: the `troll`
-submodule is a gitlink on `origin/main`, so `lib/theme_selector.rb` and
-`lib/window_state.rb` have no spec to compare against in this clone.
+* **`.reports/component-parity.md` — 7 open as audited.** Closed this round:
+  1 (Flatpak startup refusal — `exe/biblioteca` now refuses to start when no
+  documentation root exists), 3 and 4 (`troll` vendored at
+  `vendor/troll/`, pinned to `37b53b2`), 6 (`Sidebar#start_index`'s `-1`
+  clamp — see `FINDINGS.md` #11 for what actually changed), 7 (GSettings
+  schema now compiled unconditionally, not gated on a step nobody ran
+  automatically). Partially closed: 5 (the accessible-property *name* is now
+  asserted against `Gtk::AccessibleProperty`'s list in
+  `test/drive_biblioteca.rb`; the label itself is still not verified over
+  AT-SPI). Still open: 2 (Flatpak packaging — no manifest exists; recorded as
+  a gap, not reworded as a non-goal). **Open now: 1 full gap, 1 half-gap**,
+  down from 7.
+* **`.reports/test-parity.md` — 3 of 7 as audited** (`rake data:validate`
+  silently validated nothing; `appstreamcli`/`appstream-util`/
+  `flatpak-builder-lint` all missing from the devshell). Closed this round:
+  `desktop-file-utils`, `appstream` and `appstream-glib` are all in the
+  devshell now, `rake data:validate` runs both AppStream validators for real
+  (and surfaces upstream content issues — `FINDINGS.md` #12 — rather than
+  silently passing), and `rake default` plus a new CI workflow
+  (`.github/workflows/ci.yml`) run the suite, RuboCop, `rake
+  schema:validate`, `rake gettext:check_pot_drift` and all three drivers on
+  every push. Still open: `flatpak-builder-lint` on both manifests — same
+  cause as component-parity gap 2. **Open now: 1 of 3** (component-parity
+  gap 2 and this one are the same underlying gap, counted once each by their
+  own report).
+* **`.reports/translation-parity.md` — 2 gaps as audited** (TP-1: no drift
+  check on the `.pot`; TP-2: no real catalogue, nothing proving `_()` ever
+  returned a translated string). Both closed this round: `rake
+  gettext:check_pot_drift` (TP-1) and `po/fr.po`, a complete 64/64-message
+  French catalogue proven by `spec/translation_spec.rb` (TP-2). **Open now:
+  0 of 2.**
+* **`.reports/component-identification.md` — CI-1, 2 units unidentifiable**
+  (the `troll` gitlink). Closed this round by the same vendoring that closed
+  component-parity gaps 3 and 4. **Open now: 0.**
+* **`.reports/accountability-ensurance.md`** does not count in the same
+  units as the four above — it names specific sentences and specific files,
+  not a gap tally — so it is not folded into this list; read it directly. Its
+  F-6 and F-7 findings are both answered this round: F-6 (the Flatpak-refusal
+  framing) by rewriting `FINDINGS.md` #10 and `lib/package.rb`'s comment to
+  state plainly that the feature was missing, not settled; F-7 (this file's
+  own stale header) by the regeneration above.
 
 ## Blockers
 
-* **WebKitGTK 6.0 has no ruby-gnome binding.** Every content pane upstream is
-  a `WebKit.WebView`; the find controller, context-menu filtering, user
-  script/stylesheet injection, back/forward list and zoom level all have no
-  Ruby equivalent. `lib/web_view.rb` and `lib/find_overlay.rb` are written
-  against a `webkit-gtk` gem that is not installed here, and the sibling
-  `webkit-gtk-rb` checkout is the only lead. This is the largest risk in the
-  port and the reason nothing has been run.
-* **Flatpak-only runtime.** `src/bin.js` hard-exits outside Flatpak and the
-  default page is `file:///app/share/doc/gtk4/index.html`, i.e. the Flatpak
-  SDK docs mounted at `/app`. A checkout-run Ruby port has no `/app`, so the
-  default URI and the doc-index root are configurable here
-  (`DocIndex::DEFAULT_ROOTS`, `Window#default_uri` → `Sidebar#start_uri`).
-  The divergence is forced; the missing refusal is still a gap.
+None of these block the port from running — `webkit-gtk` is installed and
+working via the Nix devshell's `nix/Gemfile`, and the drivers above exercise
+every row named here. Kept as a record of what still constrains the port's
+*behaviour*, not its ability to start:
+
+* **Flatpak-only runtime, upstream side.** `src/bin.js` hard-exits outside
+  Flatpak and the default page is `file:///app/share/doc/gtk4/index.html`,
+  i.e. the Flatpak SDK docs mounted at `/app`. A checkout-run Ruby port has no
+  `/app`, so the default URI and the doc-index root are configurable here
+  (`DocIndex::DEFAULT_ROOTS`, `Window#default_uri` → `Sidebar#start_uri`),
+  and `exe/biblioteca` now refuses to start on the one condition it can check
+  in the sandbox guard's place — see "Open gaps" above and `FINDINGS.md` #10.
 * **`doc-index.json` has no source outside Flatpak.** Upstream's
   `build-aux/build-index.js` runs as a meson install script over the installed
   GI-DocGen HTML trees. `lib/doc_index.rb` rebuilds the same structure at
   first run into `XDG_CACHE_HOME/biblioteca-rb/`, but with no GI-DocGen tree
-  on the machine `#scan_libraries` returns `[]` and the sidebar is empty.
-  A bundled index or a path option is still owed.
-* **The `troll` submodule is not checked out.** `ThemeSelector` and
-  `persistWindowState` were reconstructed from upstream's imports and must be
-  verified against https://github.com/sonnyp/troll. Pin and vendor the sha,
-  then compare.
+  on the machine `#scan_libraries` returns `[]` and the sidebar would be
+  empty — which is exactly the condition `exe/biblioteca`'s new startup
+  refusal now catches instead of opening uselessly.
 * **No `po/` on `origin/main`** despite ~40 `_()` msgids in the blueprints and
-  JS, so there is no catalogue to port. Translation parity goes no further
-  than keeping the msgids marked, which `po/` does.
+  JS, so there is no catalogue to port. `po/fr.po` (this round) is the port's
+  own, not a carried-over upstream one.
 * **`Adwaita::Application` is broken in the bindings**, so the application
   object is a `Gtk::Application` with an `Adwaita::ApplicationWindow`; and
   `GtkShortcutsWindow` is deprecated in GTK 4.18 but kept, because the Adwaita
@@ -139,11 +174,13 @@ submodule is a gitlink on `origin/main`, so `lib/theme_selector.rb` and
 ## Running it
 
 ```sh
-direnv allow          # or: nix develop
-bundle install        # installs gtk4/adwaita/webkit-gtk/gettext — not done here
-rake schema:compile   # so Settings uses Gio::Settings, not the JSON fallback
-bundle exec ruby -Ilib exe/biblioteca
+direnv allow                                              # or: nix develop
+nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' rake default
+nix develop --command xvfb-run -a ruby exe/biblioteca      # just the app
 ```
 
-`.claude/skills/ruby-gtk` is the style contract; invoke it before touching any
-widget file. `bundle exec rubocop` before committing.
+The dev shell's own banner (printed on every `nix develop`) names the exact
+drive and spec commands for this checkout — read it rather than guessing at
+flags. `.claude/skills/ruby-gtk` is the style contract; invoke it before
+touching any widget file. `rubocop` (against a resolving gemset) before
+committing.

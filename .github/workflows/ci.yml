@@ -1,0 +1,29 @@
+name: CI
+
+# Runs this port's own checks: the RSpec suite, RuboCop, the compiled-schema
+# validation and the three headless UI drivers — the same tasks `rake
+# default` (rakelib/default.rake) wires together, run here under `xvfb-run`
+# because none of this CI runner has a display either.
+#
+# Upstream has no equivalent workflow checked into `origin/main` to mirror;
+# this is the port's own CI, standing in for what `meson test` plus GNOME's
+# GitLab CI gives the original.
+
+on:
+  push:
+    branches: [ruby]
+  pull_request:
+
+jobs:
+  drive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: rake default, under a virtual display
+        run: nix develop --command xvfb-run -a -s '-screen 0 1600x1200x24' rake default

@@ -240,21 +240,93 @@ describes upstream's bug, how to see it, and what the port does instead.
 
 ---
 
-## Still owed after round 3
+## Round 4
+
+1. **The Flatpak-required startup refusal (`src/bin.js:27-32`).** `lib/package.rb`'s
+   class comment used to say only that this port replicates no such guard.
+   `exe/biblioteca` now refuses to start — `warn` plus `exit(1)`, upstream's
+   shape — when `DocIndex.default_root` finds no GTK/GNOME API documentation
+   anywhere `DocIndex::DEFAULT_ROOTS` looks, which is the one condition this
+   port can check in the sandbox check's place and the one that leaves the
+   app just as useless as a missing sandbox would upstream (a permanently
+   empty sidebar, no explanation). `lib/package.rb`'s comment and
+   `FINDINGS.md` #10 are both rewritten to say so plainly rather than call it
+   a settled design decision. Verified: `exe/biblioteca` exits 1 with the
+   message on this checkout (no GNOME docs installed), and
+   `test/drive_biblioteca.rb` still passes 394/394 because it drives
+   `Biblioteca::Application` directly against a fixture, the same way
+   upstream's own guard sits in `bin.js` rather than in anything a test of
+   `application.js` would hit.
+2. **`lib/sidebar.rb`'s `-1` clamp.** No longer clamped to `0` before being
+   assigned to `browse_view.selection_model.selected`; `start_uri` is guarded
+   against the negative-array-index bug that clamp was quietly covering for
+   (`docs[-1]` silently returning the *last* page). `FINDINGS.md` #11 records
+   what was actually verified against the real GTK4 typelib:
+   `GtkSingleSelection:autoselect` (on by default, and never turned off by
+   either upstream or this port) reselects row 0 of a non-empty tree no
+   matter what is assigned to `selected`, so the on-screen result was never
+   actually different — the one place the clamp mattered was `start_uri`,
+   which is this port's own addition. `test/drive_sidebar.rb` gained a step
+   that builds a second `Sidebar` from a fixture with documentation but no
+   Gtk-4.0 node and checks both facts.
+3. **The troll gitlink.** `origin/main`'s `troll` submodule, pinned at
+   `37b53b29db0b6496f31e13c7f843100db31c9eb1`, is vendored at
+   `vendor/troll/` (see `vendor/troll/VENDORED.md`), so
+   `lib/theme_selector.rb` and `lib/window_state.rb` can be diffed against
+   the files they were actually ported from instead of an unresolvable
+   gitlink.
+4. **The GSettings schema, only reachable after a manual `rake
+   schema:compile`.** `flake.nix`'s package `installPhase` compiled the
+   schema only when `data/schemas` already existed in the source tree — which
+   it never does, since that directory is `.gitignore`d output of a step
+   nobody runs automatically — so a `nix build` shipped *no* compiled schema
+   at all. The compile is now unconditional, straight from
+   `data/app.gschema.xml`, in both the package build and the devshell's
+   `shellHook` (every `nix develop` compiles it fresh, rather than leaving a
+   developer to remember the rake task). Verified: `nix develop --command
+   bash -c 'gsettings list-schemas'` lists `org.rubygtkproject.Biblioteca`
+   with no manual step.
+
+5. **The theme-swatch accessible-label claim was unfalsifiable in-process.**
+   `Gtk::Builder` silently accepts a misspelled accessible-property name in
+   an `<accessibility>` block — it parses, the button builds, and nothing
+   observable in-process distinguishes that from success. `test/drive_biblioteca.rb`
+   now asserts the property name `ThemeSelector::BUTTON_UI` actually uses
+   against `Gtk::AccessibleProperty.values.map(&:nick)`, GTK's own list, which
+   is the one half of this claim a process without AT-SPI can check. The
+   other half — that the label itself, not just the property name, actually
+   reaches an assistive technology — needs AT-SPI out of process and is not
+   done this round; `Can't connect to a11y bus` on every drive run on this
+   checkout is the reason, not a choice.
+
+See TEST_PARITY.md and TRANSLATION_PARITY.md for this round's other closes
+(`rake default`, CI, `rake data:validate`, TP-1, TP-2) and FINDINGS.md #12 for
+an upstream `appstreamcli` finding this round's tooling surfaced.
+
+## Still owed after round 4
 
 Rows 11a and 3 of the round-2 list are paid: the theme selector's three check
 buttons carry an `<accessibility>` label (`lib/theme_selector.rb`, closed at
 `189b4e6`), and the port has been run (closed at `189b4e6` and `60ee85c`).
 What is still owed:
 
-1. The upstream bug report for `FINDINGS.md` #5 (and, lower priority, #6).
-2. `rake data:install` and `rake data:validate` have not been run, so no
-   `desktop-file-validate` or `appstreamcli` output has been seen and the
-   install layout is unobserved.
+1. The upstream bug report for `FINDINGS.md` #5 (and, lower priority, #6, #11,
+   and now #12).
+2. `rake data:install` has not been run — the install layout itself (as
+   opposed to the four templates `rake data:validate` checks, which now run
+   for real) is still unobserved.
 3. Nothing drives a pointer or a keyboard. The gesture and middle-click paths
    are reached only through the actions they end in, so the gestures
    themselves — `Gtk::GestureClick` on the two sidebar rows — are still
    unobserved.
+4. No Flatpak manifest of any kind exists, so there is nothing for
+   `flatpak-builder-lint` to check and no Flatpak build to actually exercise
+   the startup-refusal guard the way `src/bin.js:27-32` is exercised upstream
+   (inside the sandbox it checks for). Recorded as a gap, not reworded as a
+   non-goal.
+5. The theme-swatch accessible-label claim (round-2 row 11a): the property
+   *name* is now asserted against GTK's own list (round-4 item 5, above), but
+   the label itself has still not been verified out-of-band over AT-SPI.
 
 ---
 
