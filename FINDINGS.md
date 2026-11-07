@@ -282,7 +282,21 @@ deprecated (see #7). Not filed.
 
 ---
 
-## 10. `ashpd` and `libspelling` wired in, used by neither upstream nor the port
+## 10. `ashpd` and `libspelling` removed: wired in but used by neither upstream nor the port
+
+**Update:** a later round removed both dependencies (see below the original
+note). A declared gemspec dependency that nothing in `lib/` calls is a defect,
+not a placeholder to keep "ready for the day" — so once this round confirmed
+upstream never exercises either namespace (not merely that the port hadn't
+gotten to it yet), the lines came out: `biblioteca-rb.gemspec`,
+`nix/Gemfile`, `nix/Gemfile.lock` and `nix/gemset.nix` relocked without them,
+and `flake.nix`'s `ashpd`-platform-gem machinery and `libspelling` typelib
+entry in `gtkStack` removed along with it. `test/drive_biblioteca.rb` (395/395
+checks) and the RSpec suite (38/38 examples) both still pass against the
+relocked gemset. The analysis below, from the round that first investigated
+this, is kept as the record of what was checked.
+
+### Original note
 
 Both gems are declared in `biblioteca-rb.gemspec` and `nix/Gemfile`, and both
 load: `require "ashpd"; Ashpd.constants` returns 7 constants

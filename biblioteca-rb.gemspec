@@ -116,11 +116,18 @@ Gem::Specification.new do |spec|
   # `src/main.js` imports Gtk, Adw and WebKit and calls `pkg.initGettext()`;
   # these are the Ruby equivalents of those four imports.
   spec.add_dependency("adwaita", "~> 4.3")                                          # Adw.* widgets
-  spec.add_dependency("ashpd", "~> 0.1")                                            # Xdp.Portal.running_under_flatpak, OpenURI
   spec.add_dependency("gettext", "~> 3.5")                                          # pkg.initGettext
   spec.add_dependency("gtk4", "~> 4.3")                                             # Gtk.*, Gio.*, GLib.*
-  spec.add_dependency("libspelling", "~> 1.0")                                      # Spelling.* spellcheck on the search entry
   spec.add_dependency("webkit-gtk", "~> 4.3")                                       # WebKit.WebView
+  # ashpd and libspelling were declared here and never called by any lib/ code.
+  # FINDINGS.md #10: upstream's only Xdp use is the Flatpak-only
+  # running_under_flatpak() startup guard (src/bin.js:6,19), which this port
+  # cannot replicate (no sandbox to detect) and replaces with a different
+  # check in exe/biblioteca; upstream never spell-checks anything (no
+  # GtkSourceView/GtkTextView exists to attach Spelling to, and
+  # build-aux/modules/libspelling.json only unpacks offline API docs for the
+  # Flatpak build, not a GI binding src/*.js imports). Removed rather than
+  # left declared-but-unused.
 
   # Dev, Test, & Release Tasks
   spec.add_development_dependency("kettle-dev", "~> 3.1", ">= 3.1.26")             # ruby >= 3.4
