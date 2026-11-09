@@ -74,10 +74,10 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  adwaita (= 4.3.9)
-  gettext (~> 3.5)
-  gtk4 (= 4.3.9)
-  webkit-gtk (= 4.3.9)
+  adwaita
+  gettext
+  gtk4
+  webkit-gtk
 
 BUNDLED WITH
-   2.7.2
+   2.6.9

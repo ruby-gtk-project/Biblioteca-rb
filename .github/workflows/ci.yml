@@ -9,16 +9,23 @@ name: CI
 # this is the port's own CI, standing in for what `meson test` plus GNOME's
 # GitLab CI gives the original.
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [ruby]
   pull_request:
 
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
 jobs:
   drive:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: cachix/install-nix-action@v27
         with:

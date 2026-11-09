@@ -8,10 +8,7 @@
 # a packaged app's closure.
 source "https://rubygems.org"
 
-# The ruby-gnome gems move as one release train, so they are pinned together.
-# 4.3.9 is the train every binding defect in FINDINGS.md was reproduced
-# against; a bump moves those reproductions and has to be re-verified.
-gem "adwaita", "4.3.9"
-gem "gettext", "~> 3.5"
-gem "gtk4", "4.3.9"
-gem "webkit-gtk", "4.3.9"
+gem "adwaita"
+gem "gettext"
+gem "gtk4"
+gem "webkit-gtk"

@@ -60,15 +60,8 @@ eval_gemfile "gemfiles/modular/x_std_libs.gemfile"
 # See unlocked_deps appraisal for more details on irb inclusion
 gem "irb", "~> 1.17" # ruby >= 2.7
 gem "gem_kit"
-gem "gtk4"
 
 group :development do
   gem "rubocop"
 end
-gem "adwaita"
-gem "webkit-gtk"
 
-# The app's own translatable strings go through the gettext gem. glib2 only
-# exposes GLib::GetText.bindtextdomain, which is libintl's and covers GTK's own
-# strings and the .ui file GtkBuilder translates, not _() in Ruby.
-gem "gettext"
